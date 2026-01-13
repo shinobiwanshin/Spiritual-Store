@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useParams } from "next/navigation";
+import { useAuth, useClerk } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -15,11 +16,21 @@ import { getProductById, getRelatedProducts, Product } from "@/data/products";
 export default function ProductDetail() {
   const params = useParams();
   const productId = params.id as string;
+  const { isSignedIn } = useAuth();
+  const { openSignIn } = useClerk();
 
   const product = getProductById(productId);
   const relatedProducts = getRelatedProducts(productId, 5);
 
   const [activeImage, setActiveImage] = useState(0);
+
+  const handleAuthAction = (action: () => void) => {
+    if (!isSignedIn) {
+      openSignIn();
+    } else {
+      action();
+    }
+  };
 
   // Fallback if product not found
   if (!product) {
@@ -48,7 +59,7 @@ export default function ProductDetail() {
               href="/"
               className="font-serif text-2xl font-bold text-primary tracking-tight"
             >
-              VEDIC STORE
+              ASTRASPIRITUAL
             </Link>
             <div className="hidden md:flex items-center gap-6 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
               <Link
@@ -230,14 +241,16 @@ export default function ProductDetail() {
               <Button
                 variant="outline"
                 className="h-16 border-2 border-primary text-primary font-bold rounded-xl gap-2 hover:bg-primary/5 text-base"
-                onClick={() => alert("Added to cart!")}
+                onClick={() => handleAuthAction(() => alert("Added to cart!"))}
               >
                 <span className="material-symbols-outlined">shopping_bag</span>
                 Add to Cart
               </Button>
               <Button
                 className="h-16 bg-primary text-primary-foreground font-black text-xl rounded-xl shadow-xl shadow-primary/20 hover:bg-primary/90 text-base"
-                onClick={() => alert("Proceeding to checkout!")}
+                onClick={() =>
+                  handleAuthAction(() => alert("Proceeding to checkout!"))
+                }
               >
                 Buy Now
               </Button>
@@ -382,7 +395,7 @@ export default function ProductDetail() {
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="space-y-4">
             <h3 className="font-serif text-xl font-bold text-primary">
-              VEDIC STORE
+              ASTRASPIRITUAL
             </h3>
             <p className="text-gray-400 text-sm leading-relaxed">
               Bringing ancient wisdom to the modern world through authentic
@@ -454,7 +467,7 @@ export default function ProductDetail() {
           </div>
         </div>
         <div className="max-w-7xl mx-auto pt-12 mt-12 border-t border-white/10 text-center text-gray-500 text-xs">
-          © 2024 Vedic Store. All sacred items are ethically sourced and lab
+          © 2024 AstraSpiritual. All sacred items are ethically sourced and lab
           certified.
         </div>
       </footer>

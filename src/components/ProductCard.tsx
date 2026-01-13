@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useAuth, useClerk } from "@clerk/nextjs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ interface ProductCardProps {
   image: string;
   originalPrice?: string;
   discount?: string;
+  onQuickView?: () => void;
 }
 
 export default function ProductCard({
@@ -25,74 +27,91 @@ export default function ProductCard({
   image,
   originalPrice,
   discount,
+  onQuickView,
 }: ProductCardProps) {
+  const { isSignedIn } = useAuth();
+  const { openSignIn } = useClerk();
+
+  const handleAuthAction = (action: () => void) => {
+    if (!isSignedIn) {
+      openSignIn();
+    } else {
+      action();
+    }
+  };
+
   return (
-    <Link href={`/product/${id}`} className="block group">
-      <Card className="overflow-hidden border border-primary/10 rounded-2xl bg-[#f9f6f0] dark:bg-[#242220] shadow-sm hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-1">
-        {/* Image Container */}
-        <div className="relative aspect-square overflow-hidden bg-muted">
+    <Card className="group overflow-hidden border border-primary/10 rounded-2xl bg-[#f9f6f0] dark:bg-[#242220] shadow-sm hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-1">
+      {/* Image Container */}
+      <div className="relative aspect-square overflow-hidden bg-muted">
+        <Link href={`/product/${id}`}>
           <div
             className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-110"
             style={{ backgroundImage: `url('${image}')` }}
           />
           {/* Overlay on Hover */}
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
+        </Link>
 
-          {/* Discount Badge */}
-          {discount && (
-            <Badge className="absolute top-3 left-3 bg-terracotta text-white border-none shadow-lg">
-              {discount}
-            </Badge>
-          )}
+        {/* Discount Badge */}
+        {discount && (
+          <Badge className="absolute top-3 left-3 bg-terracotta text-white border-none shadow-lg">
+            {discount}
+          </Badge>
+        )}
 
-          {/* Quick Actions - Appear on Hover */}
-          <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-            <Button
-              size="icon"
-              variant="secondary"
-              className="size-9 rounded-full bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white hover:scale-110 text-foreground transition-transform"
-              onClick={(e) => {
-                e.preventDefault();
-                alert("Added to wishlist!");
-              }}
-            >
-              <span className="material-symbols-outlined text-lg">
-                favorite
-              </span>
-            </Button>
-            <Button
-              size="icon"
-              variant="secondary"
-              className="size-9 rounded-full bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white hover:scale-110 text-foreground transition-transform"
-              onClick={(e) => {
-                e.preventDefault();
-                alert("Quick view!");
-              }}
-            >
-              <span className="material-symbols-outlined text-lg">
-                visibility
-              </span>
-            </Button>
-          </div>
-
-          {/* Add to Cart - Appears on Hover */}
-          <div className="absolute bottom-0 left-0 right-0 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-            <Button
-              className="w-full h-10 rounded-xl font-bold shadow-lg gap-2"
-              onClick={(e) => {
-                e.preventDefault();
-                alert("Added to cart!");
-              }}
-            >
-              <span className="material-symbols-outlined text-lg">
-                shopping_bag
-              </span>
-              Add to Cart
-            </Button>
-          </div>
+        {/* Quick Actions - Appear on Hover */}
+        <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+          <Button
+            size="icon"
+            variant="secondary"
+            className="size-9 rounded-full bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white hover:scale-110 text-foreground transition-transform"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleAuthAction(() => alert("Added to wishlist!"));
+            }}
+          >
+            <span className="material-symbols-outlined text-lg">favorite</span>
+          </Button>
+          <Button
+            size="icon"
+            variant="secondary"
+            className="size-9 rounded-full bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white hover:scale-110 text-foreground transition-transform"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (onQuickView) {
+                onQuickView();
+              }
+            }}
+          >
+            <span className="material-symbols-outlined text-lg">
+              visibility
+            </span>
+          </Button>
         </div>
 
-        {/* Content */}
+        {/* Add to Cart - Appears on Hover */}
+        <div className="absolute bottom-0 left-0 right-0 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+          <Button
+            className="w-full h-10 rounded-xl font-bold shadow-lg gap-2"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleAuthAction(() => alert("Added to cart!"));
+            }}
+          >
+            <span className="material-symbols-outlined text-lg">
+              shopping_bag
+            </span>
+            Add to Cart
+          </Button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <Link href={`/product/${id}`}>
         <CardContent className="p-4 space-y-2">
           <Badge
             variant="outline"
@@ -103,14 +122,15 @@ export default function ProductCard({
           <h3 className="font-serif font-bold text-foreground leading-tight line-clamp-2 group-hover:text-primary transition-colors duration-300">
             {title}
           </h3>
-          <div className="flex items-center gap-1 text-yellow-500">
+          <div className="flex items-center gap-0.5">
             {[1, 2, 3, 4, 5].map((star) => (
-              <span
+              <svg
                 key={star}
-                className="material-symbols-outlined text-sm fill-1"
+                className="w-3.5 h-3.5 text-yellow-500 fill-current"
+                viewBox="0 0 24 24"
               >
-                star
-              </span>
+                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+              </svg>
             ))}
             <span className="text-xs text-muted-foreground ml-1">
               ({reviews})
@@ -125,7 +145,7 @@ export default function ProductCard({
             )}
           </div>
         </CardContent>
-      </Card>
-    </Link>
+      </Link>
+    </Card>
   );
 }

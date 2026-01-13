@@ -19,7 +19,7 @@ const config: Config = {
         saffron: "#FF9933",
       },
       fontFamily: {
-        display: ["Noto Serif", "serif"],
+        display: ["Playfair Display", "serif"],
         sans: ["Manrope", "sans-serif"],
       },
       borderRadius: {
