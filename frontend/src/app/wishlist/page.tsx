@@ -54,7 +54,7 @@ export default function Wishlist() {
       price: item.price,
       originalPrice: item.originalPrice || undefined,
       discount: item.discount || undefined,
-      rating: item.rating || 4.5,
+      rating: Number(item.rating) || 4.5,
       reviews: item.reviewsCount || 0,
       images: item.images || [],
       description: item.description || "",
