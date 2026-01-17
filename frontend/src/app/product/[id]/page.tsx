@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useAuth, useClerk } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
@@ -11,18 +11,86 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import StarRating from "@/components/StarRating";
-import { getProductById, getRelatedProducts, Product } from "@/data/products";
+import Navbar from "@/components/Navbar";
+import { useCartStore } from "@/lib/stores/cart-store";
+import { toast } from "sonner";
+
+interface Product {
+  id: string;
+  title: string;
+  category: string;
+  price: string;
+  originalPrice?: string;
+  discount?: string;
+  rating: number;
+  reviews: number;
+  images: string[];
+  description: string;
+  benefits: string[];
+  howToWear: {
+    bestDay: string;
+    bestTime: string;
+    mantra: string;
+  };
+  zodiacCompatibility: string[];
+  isLabCertified: boolean;
+}
 
 export default function ProductDetail() {
   const params = useParams();
   const productId = params.id as string;
   const { isSignedIn } = useAuth();
   const { openSignIn } = useClerk();
+  const addItem = useCartStore((state) => state.addItem);
 
-  const product = getProductById(productId);
-  const relatedProducts = getRelatedProducts(productId, 5);
-
+  const [product, setProduct] = useState<Product | null>(null);
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
+
+  useEffect(() => {
+    const fetchProductData = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/products/${productId}`);
+        if (!res.ok) throw new Error("Product not found");
+        const data = await res.json();
+        setProduct(data);
+
+        // Fetch "Divine Pairings" based on Zodiac Compatibility
+        // If product has zodiacs, find other products that match those zodiacs
+        // Otherwise fallback to same category
+        let relatedQuery = "";
+
+        if (data.zodiacCompatibility && data.zodiacCompatibility.length > 0) {
+          const zodiacs = data.zodiacCompatibility.join(",");
+          relatedQuery = `?zodiac=${zodiacs}&limit=5&exclude=${productId}`;
+        } else if (data.category) {
+          relatedQuery = `?category=${data.category}&limit=5&exclude=${productId}`;
+        }
+
+        if (relatedQuery) {
+          const relatedRes = await fetch(`/api/products${relatedQuery}`);
+          if (relatedRes.ok) {
+            const result = await relatedRes.json();
+            // API returns { products: [], pagination: {} }
+            // If API returns plain array (old behavior), handle it, but our new API returns object
+            const relatedData = result.products || result;
+
+            setRelatedProducts(Array.isArray(relatedData) ? relatedData : []);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching product:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (productId) {
+      fetchProductData();
+    }
+  }, [productId]);
 
   const handleAuthAction = (action: () => void) => {
     if (!isSignedIn) {
@@ -31,6 +99,15 @@ export default function ProductDetail() {
       action();
     }
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   // Fallback if product not found
   if (!product) {
@@ -52,72 +129,10 @@ export default function ProductDetail() {
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
       {/* Navbar */}
-      <nav className="sticky top-0 z-50 w-full bg-background/90 backdrop-blur-md border-b border-border">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link
-              href="/"
-              className="font-serif text-2xl font-bold text-primary tracking-tight"
-            >
-              ASTRASPIRITUAL
-            </Link>
-            <div className="hidden md:flex items-center gap-6 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              <Link
-                href="/shop"
-                className="hover:text-primary transition-colors"
-              >
-                Rudraksha
-              </Link>
-              <Link
-                href="/shop"
-                className="hover:text-primary transition-colors"
-              >
-                Gemstones
-              </Link>
-              <Link
-                href="/shop"
-                className="hover:text-primary transition-colors"
-              >
-                Pujas
-              </Link>
-              <Link
-                href="/rashi"
-                className="hover:text-primary transition-colors"
-              >
-                Horoscope
-              </Link>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full hover:bg-muted"
-            >
-              <span className="material-symbols-outlined">search</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full hover:bg-muted"
-            >
-              <span className="material-symbols-outlined">favorite</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full hover:bg-muted relative"
-            >
-              <span className="material-symbols-outlined">shopping_cart</span>
-              <span className="absolute top-1 right-1 size-4 bg-terracotta text-white text-[10px] flex items-center justify-center rounded-full">
-                2
-              </span>
-            </Button>
-          </div>
-        </div>
-      </nav>
+      {/* Navbar */}
+      <Navbar />
 
-      <main className="max-w-7xl mx-auto px-6 py-12">
+      <main className="max-w-7xl mx-auto px-6 pt-28 pb-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
           {/* Images Section */}
           <div className="lg:col-span-7 flex flex-col-reverse lg:flex-row-reverse gap-4 h-auto lg:h-[600px]">
@@ -132,7 +147,7 @@ export default function ProductDetail() {
               <Button
                 variant="secondary"
                 size="icon"
-                className="absolute bottom-6 right-6 rounded-full bg-white/20 backdrop-blur-md border border-white/30 hover:bg-white/40 text-white"
+                className="absolute bottom-6 right-6 rounded-full bg-white/20 backdrop-blur-md border border-white/30 hover:bg-white/40 text-white transition-transform hover:scale-110 active:scale-95"
               >
                 <span className="material-symbols-outlined">zoom_in</span>
               </Button>
@@ -240,16 +255,38 @@ export default function ProductDetail() {
             <div className="grid grid-cols-2 gap-4 pt-4">
               <Button
                 variant="outline"
-                className="h-16 border-2 border-primary text-primary font-bold rounded-xl gap-2 hover:bg-primary/5 text-base"
-                onClick={() => handleAuthAction(() => alert("Added to cart!"))}
+                className="h-16 border-2 border-primary text-primary font-bold rounded-xl gap-2 hover:bg-primary/5 text-base transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                onClick={() =>
+                  handleAuthAction(() => {
+                    if (product) {
+                      addItem({
+                        id: product.id,
+                        title: product.title,
+                        price: product.price,
+                        image: product.images[0],
+                      });
+                      toast.success("Added to cart");
+                    }
+                  })
+                }
               >
                 <span className="material-symbols-outlined">shopping_bag</span>
                 Add to Cart
               </Button>
               <Button
-                className="h-16 bg-primary text-primary-foreground font-black text-xl rounded-xl shadow-xl shadow-primary/20 hover:bg-primary/90 text-base"
+                className="h-16 bg-primary text-primary-foreground font-black text-xl rounded-xl shadow-xl shadow-primary/20 hover:bg-primary/90 text-base transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] hover:shadow-2xl hover:shadow-primary/30"
                 onClick={() =>
-                  handleAuthAction(() => alert("Proceeding to checkout!"))
+                  handleAuthAction(() => {
+                    if (product) {
+                      addItem({
+                        id: product.id,
+                        title: product.title,
+                        price: product.price,
+                        image: product.images[0],
+                      });
+                      toast.success("Proceeding to checkout");
+                    }
+                  })
                 }
               >
                 Buy Now
@@ -346,14 +383,14 @@ export default function ProductDetail() {
               <Button
                 variant="outline"
                 size="icon"
-                className="rounded-full border-primary/20 hover:bg-primary/10"
+                className="rounded-full border-primary/20 hover:bg-primary/10 transition-transform active:scale-95 hover:scale-110"
               >
                 <span className="material-symbols-outlined">chevron_left</span>
               </Button>
               <Button
                 variant="outline"
                 size="icon"
-                className="rounded-full border-primary text-primary hover:bg-primary/10"
+                className="rounded-full border-primary text-primary hover:bg-primary/10 transition-transform active:scale-95 hover:scale-110"
               >
                 <span className="material-symbols-outlined">chevron_right</span>
               </Button>
@@ -376,7 +413,7 @@ export default function ProductDetail() {
                       <p className="text-primary font-black">{item.price}</p>
                       <Button
                         size="icon"
-                        className="size-8 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors shadow-none h-8 w-8"
+                        className="size-8 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shadow-none h-8 w-8 hover:scale-110 active:scale-95"
                       >
                         <span className="material-symbols-outlined text-base">
                           add

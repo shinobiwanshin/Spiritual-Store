@@ -3,6 +3,7 @@ import { Manrope, Playfair_Display, Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ClerkProvider } from "@clerk/nextjs";
+import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -48,6 +49,7 @@ export default function RootLayout({
         </head>
         <body className="font-sans antialiased bg-background-light dark:bg-background-dark text-[#161513] dark:text-white">
           {children}
+          <Toaster position="top-center" richColors />
         </body>
       </html>
     </ClerkProvider>

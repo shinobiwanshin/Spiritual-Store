@@ -4,9 +4,31 @@ import { useState } from "react";
 import Link from "next/link";
 import { useAuth, useClerk } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Product } from "@/data/products";
+import { useCartStore } from "@/lib/stores/cart-store";
+import { toast } from "sonner";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+
+interface Product {
+  id: string;
+  title: string;
+  category: string;
+  price: string;
+  originalPrice?: string;
+  discount?: string;
+  rating: number;
+  reviews: number;
+  images: string[];
+  description: string;
+  benefits?: string[];
+  howToWear?: {
+    bestDay: string;
+    bestTime: string;
+    mantra: string;
+  };
+  zodiacCompatibility?: string[];
+  isLabCertified?: boolean;
+}
 
 interface QuickViewModalProps {
   product: Product | null;
@@ -22,6 +44,7 @@ export default function QuickViewModal({
   const [quantity, setQuantity] = useState(1);
   const { isSignedIn } = useAuth();
   const { openSignIn } = useClerk();
+  const addItem = useCartStore((state) => state.addItem);
 
   const handleAuthAction = (action: () => void) => {
     if (!isSignedIn) {
@@ -152,8 +175,18 @@ export default function QuickViewModal({
             <div className="flex gap-3 pt-2">
               <Button
                 variant="outline"
-                className="flex-1 border-primary text-primary hover:bg-primary hover:text-white"
-                onClick={() => handleAuthAction(() => alert("Added to cart!"))}
+                className="flex-1 border-primary text-primary hover:bg-primary hover:text-white transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                onClick={() =>
+                  handleAuthAction(() => {
+                    addItem({
+                      id: product.id,
+                      title: product.title,
+                      price: product.price,
+                      image: product.images[0],
+                    });
+                    toast.success("Added to cart");
+                  })
+                }
               >
                 <span className="material-symbols-outlined mr-2">
                   shopping_bag
@@ -161,9 +194,18 @@ export default function QuickViewModal({
                 Add to Cart
               </Button>
               <Button
-                className="flex-1 shadow-lg shadow-primary/20"
+                className="flex-1 shadow-lg shadow-primary/20 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] hover:shadow-2xl hover:shadow-primary/30"
                 onClick={() =>
-                  handleAuthAction(() => alert("Proceeding to buy!"))
+                  handleAuthAction(() => {
+                    addItem({
+                      id: product.id,
+                      title: product.title,
+                      price: product.price,
+                      image: product.images[0],
+                    });
+                    toast.success("Proceeding to checkout");
+                    // Implement checkout redirection here if needed
+                  })
                 }
               >
                 Buy Now

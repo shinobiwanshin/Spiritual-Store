@@ -4,8 +4,11 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
+import { useCartStore } from "@/lib/stores/cart-store";
 
 export default function Navbar() {
+  const totalItems = useCartStore((state) => state.getTotalItems());
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/60 backdrop-blur-xl border-b border-border/30">
       <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
@@ -82,9 +85,11 @@ export default function Navbar() {
               className="rounded-full hover:bg-primary/10 hover:text-primary transition-colors relative"
             >
               <span className="material-symbols-outlined">shopping_bag</span>
-              <Badge className="absolute -top-1 -right-1 size-5 p-0 flex items-center justify-center text-[10px]">
-                2
-              </Badge>
+              {totalItems > 0 && (
+                <Badge className="absolute -top-1 -right-1 size-5 p-0 flex items-center justify-center text-[10px]">
+                  {totalItems}
+                </Badge>
+              )}
             </Button>
           </Link>
 

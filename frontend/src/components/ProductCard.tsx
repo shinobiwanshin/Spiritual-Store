@@ -5,6 +5,8 @@ import { useAuth, useClerk } from "@clerk/nextjs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useCartStore } from "@/lib/stores/cart-store";
+import { toast } from "sonner";
 
 interface ProductCardProps {
   id: string;
@@ -31,6 +33,7 @@ export default function ProductCard({
 }: ProductCardProps) {
   const { isSignedIn } = useAuth();
   const { openSignIn } = useClerk();
+  const addItem = useCartStore((state) => state.addItem);
 
   const handleAuthAction = (action: () => void) => {
     if (!isSignedIn) {
@@ -65,11 +68,11 @@ export default function ProductCard({
           <Button
             size="icon"
             variant="secondary"
-            className="size-9 rounded-full bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white hover:scale-110 text-foreground transition-transform"
+            className="size-10 rounded-full bg-white text-primary shadow-xl hover:bg-primary hover:text-white hover:scale-110 transition-all duration-300"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              handleAuthAction(() => alert("Added to wishlist!"));
+              handleAuthAction(() => toast.success("Added to wishlist!"));
             }}
           >
             <span className="material-symbols-outlined text-lg">favorite</span>
@@ -77,7 +80,7 @@ export default function ProductCard({
           <Button
             size="icon"
             variant="secondary"
-            className="size-9 rounded-full bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white hover:scale-110 text-foreground transition-transform"
+            className="size-10 rounded-full bg-white text-primary shadow-xl hover:bg-primary hover:text-white hover:scale-110 transition-all duration-300"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -99,7 +102,10 @@ export default function ProductCard({
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              handleAuthAction(() => alert("Added to cart!"));
+              handleAuthAction(() => {
+                addItem({ id, title, price, image });
+                toast.success("Added to cart");
+              });
             }}
           >
             <span className="material-symbols-outlined text-lg">

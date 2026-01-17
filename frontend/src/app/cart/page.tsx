@@ -6,23 +6,15 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { products } from "@/data/products";
+import { useCartStore } from "@/lib/stores/cart-store";
 
 export default function CartPage() {
-  // Mock cart items - in real app this would come from state/database
-  const cartItems = [
-    { product: products[0], quantity: 1 },
-    { product: products[2], quantity: 2 },
-  ];
+  const { items, removeItem, updateQuantity, getTotalPrice, clearCart } =
+    useCartStore();
 
-  const subtotal = cartItems.reduce((acc, item) => {
-    const price = parseInt(item.product.price.replace(/[₹,]/g, ""));
-    return acc + price * item.quantity;
-  }, 0);
-
-  const shipping = 0; // Free shipping
+  const subtotal = getTotalPrice();
+  const shipping = 0;
   const total = subtotal + shipping;
 
   return (
@@ -46,7 +38,8 @@ export default function CartPage() {
                 <div>
                   <h1 className="text-3xl font-serif font-bold">Your Cart</h1>
                   <p className="text-muted-foreground">
-                    {cartItems.length} items ready for checkout
+                    {items.length} {items.length === 1 ? "item" : "items"} ready
+                    for checkout
                   </p>
                 </div>
               </div>
@@ -55,26 +48,26 @@ export default function CartPage() {
 
           {/* Cart Content */}
           <div className="max-w-7xl mx-auto px-6 pb-24">
-            {cartItems.length > 0 ? (
+            {items.length > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Cart Items */}
                 <div className="lg:col-span-2 space-y-4">
-                  {cartItems.map((item, index) => (
+                  {items.map((item) => (
                     <Card
-                      key={index}
+                      key={item.id}
                       className="overflow-hidden border-border/50 hover:shadow-lg transition-all"
                     >
                       <CardContent className="p-0">
                         <div className="flex">
                           {/* Image */}
                           <Link
-                            href={`/product/${item.product.id}`}
+                            href={`/product/${item.id}`}
                             className="w-32 h-32 md:w-40 md:h-40 relative shrink-0 overflow-hidden bg-muted"
                           >
                             <div
                               className="absolute inset-0 bg-cover bg-center hover:scale-110 transition-transform duration-500"
                               style={{
-                                backgroundImage: `url('${item.product.images[0]}')`,
+                                backgroundImage: `url('${item.image}')`,
                               }}
                             />
                           </Link>
@@ -84,15 +77,9 @@ export default function CartPage() {
                             <div>
                               <div className="flex items-start justify-between">
                                 <div>
-                                  <Badge
-                                    variant="outline"
-                                    className="text-[10px] mb-1"
-                                  >
-                                    {item.product.category}
-                                  </Badge>
-                                  <Link href={`/product/${item.product.id}`}>
+                                  <Link href={`/product/${item.id}`}>
                                     <h3 className="font-serif font-bold hover:text-primary transition-colors">
-                                      {item.product.title}
+                                      {item.title}
                                     </h3>
                                   </Link>
                                 </div>
@@ -100,6 +87,7 @@ export default function CartPage() {
                                   variant="ghost"
                                   size="icon"
                                   className="text-muted-foreground hover:text-destructive shrink-0"
+                                  onClick={() => removeItem(item.id)}
                                 >
                                   <span className="material-symbols-outlined">
                                     delete
@@ -115,6 +103,9 @@ export default function CartPage() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 rounded-full"
+                                  onClick={() =>
+                                    updateQuantity(item.id, item.quantity - 1)
+                                  }
                                 >
                                   <span className="material-symbols-outlined text-lg">
                                     remove
@@ -127,6 +118,9 @@ export default function CartPage() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 rounded-full"
+                                  onClick={() =>
+                                    updateQuantity(item.id, item.quantity + 1)
+                                  }
                                 >
                                   <span className="material-symbols-outlined text-lg">
                                     add
@@ -137,13 +131,8 @@ export default function CartPage() {
                               {/* Price */}
                               <div className="text-right">
                                 <p className="text-lg font-black text-primary">
-                                  {item.product.price}
+                                  {item.price}
                                 </p>
-                                {item.product.originalPrice && (
-                                  <p className="text-xs text-muted-foreground line-through">
-                                    {item.product.originalPrice}
-                                  </p>
-                                )}
                               </div>
                             </div>
                           </div>
@@ -151,6 +140,20 @@ export default function CartPage() {
                       </CardContent>
                     </Card>
                   ))}
+
+                  {/* Clear Cart Button */}
+                  <div className="flex justify-end">
+                    <Button
+                      variant="outline"
+                      className="text-destructive hover:bg-destructive hover:text-white"
+                      onClick={clearCart}
+                    >
+                      <span className="material-symbols-outlined mr-2">
+                        delete_sweep
+                      </span>
+                      Clear Cart
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Order Summary */}
@@ -207,12 +210,14 @@ export default function CartPage() {
                         </Button>
                       </div>
 
-                      <Button className="w-full h-12 text-base font-bold shadow-xl shadow-primary/20">
-                        <span className="material-symbols-outlined mr-2">
-                          lock
-                        </span>
-                        Secure Checkout
-                      </Button>
+                      <Link href="/checkout">
+                        <Button className="w-full h-12 text-base font-bold shadow-xl shadow-primary/20">
+                          <span className="material-symbols-outlined mr-2">
+                            lock
+                          </span>
+                          Proceed to Checkout
+                        </Button>
+                      </Link>
 
                       {/* Trust Badges */}
                       <div className="flex items-center justify-center gap-4 pt-2 text-muted-foreground">
@@ -266,7 +271,7 @@ export default function CartPage() {
             )}
 
             {/* Continue Shopping */}
-            {cartItems.length > 0 && (
+            {items.length > 0 && (
               <div className="mt-8 text-center">
                 <Link href="/shop">
                   <Button variant="outline" className="gap-2">
