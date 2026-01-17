@@ -7,11 +7,19 @@ export default function HeroSection() {
     <section className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-background via-primary/5 to-background"></div>
-      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/paper-fibers.png')] opacity-50"></div>
 
-      {/* Floating Elements */}
-      <div className="absolute top-1/4 left-10 size-64 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
-      <div className="absolute bottom-1/4 right-10 size-80 bg-terracotta/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+      {/* Rotating Zodiac Wheel - Centered */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] md:w-[700px] md:h-[700px] lg:w-[800px] lg:h-[800px]">
+        <img
+          src="/Zodiac-Wheel.png"
+          alt="Zodiac Wheel"
+          className="w-full h-full object-contain opacity-30 animate-[spin_60s_linear_infinite]"
+        />
+      </div>
+
+      {/* Floating Glow Elements */}
+      <div className="absolute top-1/3 left-1/4 size-64 bg-primary/10 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-1/3 right-1/3 size-48 bg-secondary/10 rounded-full blur-3xl"></div>
 
       <div className="relative z-10 max-w-6xl mx-auto px-6 text-center space-y-8">
         <Badge className="bg-primary/10 text-primary border-primary/20 px-4 py-2 text-sm font-medium">

@@ -22,7 +22,7 @@ import { products, Product, getProductById } from "@/data/products";
 export default function Shop() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(
-    null
+    null,
   );
 
   const categories = [
@@ -39,7 +39,6 @@ export default function Shop() {
 
       {/* Hero Banner */}
       <section className="pt-24 pb-12 bg-gradient-to-b from-primary/5 via-background to-background relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/paper-fibers.png')] opacity-30"></div>
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="text-center space-y-4 py-12">
             <Badge

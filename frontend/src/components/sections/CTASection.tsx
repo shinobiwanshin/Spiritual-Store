@@ -5,7 +5,6 @@ export default function CTASection() {
   return (
     <section className="py-24 relative overflow-hidden">
       <div className="absolute inset-0 bg-primary"></div>
-      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/paper-fibers.png')] opacity-10"></div>
 
       <div className="relative z-10 max-w-4xl mx-auto px-6 text-center text-white space-y-8">
         <h2 className="text-4xl md:text-5xl font-serif font-bold leading-tight">

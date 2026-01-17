@@ -10,13 +10,64 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: "#a67a3f",
-        "background-light": "#fcfbf7",
-        "background-dark": "#1b1a18",
-        "spiritual-blue": "#2E3A6D",
-        terracotta: "#b35a38",
-        sapphire: "#2E3A6D",
-        saffron: "#FF9933",
+        // CSS variable colors from globals.css
+        background: "var(--background)",
+        foreground: "var(--foreground)",
+        card: {
+          DEFAULT: "var(--card)",
+          foreground: "var(--card-foreground)",
+        },
+        popover: {
+          DEFAULT: "var(--popover)",
+          foreground: "var(--popover-foreground)",
+        },
+        primary: {
+          DEFAULT: "var(--primary)",
+          foreground: "var(--primary-foreground)",
+        },
+        secondary: {
+          DEFAULT: "var(--secondary)",
+          foreground: "var(--secondary-foreground)",
+        },
+        muted: {
+          DEFAULT: "var(--muted)",
+          foreground: "var(--muted-foreground)",
+        },
+        accent: {
+          DEFAULT: "var(--accent)",
+          foreground: "var(--accent-foreground)",
+        },
+        destructive: {
+          DEFAULT: "var(--destructive)",
+          foreground: "var(--destructive-foreground)",
+        },
+        border: "var(--border)",
+        input: "var(--input)",
+        ring: "var(--ring)",
+        chart: {
+          1: "var(--chart-1)",
+          2: "var(--chart-2)",
+          3: "var(--chart-3)",
+          4: "var(--chart-4)",
+          5: "var(--chart-5)",
+        },
+        sidebar: {
+          DEFAULT: "var(--sidebar)",
+          foreground: "var(--sidebar-foreground)",
+          primary: "var(--sidebar-primary)",
+          "primary-foreground": "var(--sidebar-primary-foreground)",
+          accent: "var(--sidebar-accent)",
+          "accent-foreground": "var(--sidebar-accent-foreground)",
+          border: "var(--sidebar-border)",
+          ring: "var(--sidebar-ring)",
+        },
+        // Cosmic theme custom colors
+        "cosmic-dark": "#0a0a1a",
+        "cosmic-card": "#12122a",
+        "cosmic-muted": "#1a1a3a",
+        coral: "#ff6b6b",
+        teal: "#00b4d8",
+        purple: "#a855f7",
       },
       fontFamily: {
         display: ["Playfair Display", "serif"],
