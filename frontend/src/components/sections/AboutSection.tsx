@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 
 export default function AboutSection() {
   return (
-    <section id="about" className="py-24 bg-[#f9f6f0] dark:bg-[#1a1918]">
+    <section id="about" className="py-24 bg-muted/50 dark:bg-card/50">
       <div className="max-w-7xl mx-auto px-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <div className="space-y-6">

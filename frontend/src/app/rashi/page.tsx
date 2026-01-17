@@ -47,7 +47,7 @@ export default function RashiPage() {
       </section>
 
       {/* Benefits Section */}
-      <section className="py-12 px-6 bg-[#f9f6f0] dark:bg-[#1a1918]">
+      <section className="py-12 px-6 bg-muted/50 dark:bg-card/50">
         <div className="max-w-5xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
@@ -218,7 +218,7 @@ export default function RashiPage() {
       </section>
 
       {/* What You Get Section */}
-      <section className="py-16 px-6 bg-[#f9f6f0] dark:bg-[#1a1918]">
+      <section className="py-16 px-6 bg-muted/50 dark:bg-card/50">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <Badge

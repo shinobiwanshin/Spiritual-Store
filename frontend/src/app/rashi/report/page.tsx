@@ -203,7 +203,7 @@ export default function RashiReport() {
       </section>
 
       {/* Action Buttons */}
-      <section className="py-12 px-6 bg-[#f9f6f0] dark:bg-[#1a1918]">
+      <section className="py-12 px-6 bg-muted/50 dark:bg-card/50">
         <div className="max-w-4xl mx-auto">
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button

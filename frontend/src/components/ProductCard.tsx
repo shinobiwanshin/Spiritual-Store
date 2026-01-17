@@ -41,7 +41,7 @@ export default function ProductCard({
   };
 
   return (
-    <Card className="group overflow-hidden border border-primary/10 rounded-2xl bg-[#f9f6f0] dark:bg-[#242220] shadow-sm hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-1">
+    <Card className="group overflow-hidden border border-primary/10 rounded-2xl bg-card shadow-sm hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-1">
       {/* Image Container */}
       <div className="relative aspect-square overflow-hidden bg-muted">
         <Link href={`/product/${id}`}>

@@ -25,7 +25,7 @@ const testimonials = [
 
 export default function TestimonialsSection() {
   return (
-    <section id="testimonials" className="py-24 bg-[#f9f6f0] dark:bg-[#1a1918]">
+    <section id="testimonials" className="py-24 bg-muted/50 dark:bg-card/50">
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-16">
           <Badge variant="outline" className="text-primary border-primary mb-4">

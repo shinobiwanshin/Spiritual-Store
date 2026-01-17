@@ -212,7 +212,7 @@ export default function ProductDetail() {
             </div>
 
             {/* Astrology Toggle Card */}
-            <Card className="bg-[#f9f6f0] dark:bg-[#242220] border-primary/20 relative overflow-hidden group shadow-md transition-shadow hover:shadow-lg">
+            <Card className="bg-card border-primary/20 relative overflow-hidden group shadow-md transition-shadow hover:shadow-lg">
               <div className="absolute -right-4 -top-4 opacity-5 pointer-events-none transition-transform group-hover:scale-110 duration-500">
                 <span className="material-symbols-outlined text-[120px] text-primary">
                   auto_awesome
@@ -266,7 +266,7 @@ export default function ProductDetail() {
 
             {/* Info Cards */}
             <div className="grid grid-cols-1 gap-4">
-              <Card className="bg-[#f9f6f0] dark:bg-[#242220] border-primary/5 shadow-sm">
+              <Card className="bg-card border-primary/5 shadow-sm">
                 <CardContent className="p-5">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="size-8 bg-primary/10 rounded flex items-center justify-center text-primary">
@@ -289,7 +289,7 @@ export default function ProductDetail() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-[#f9f6f0] dark:bg-[#242220] border-primary/5 shadow-sm">
+              <Card className="bg-card border-primary/5 shadow-sm">
                 <CardContent className="p-5">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="size-8 bg-primary/10 rounded flex items-center justify-center text-primary">
@@ -363,7 +363,7 @@ export default function ProductDetail() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
             {relatedProducts.map((item) => (
               <Link key={item.id} href={`/product/${item.id}`}>
-                <Card className="rounded-2xl overflow-hidden border border-primary/10 hover:shadow-xl transition-all group bg-[#f9f6f0] dark:bg-[#242220]">
+                <Card className="rounded-2xl overflow-hidden border border-primary/10 hover:shadow-xl transition-all group bg-card">
                   <div className="h-48 overflow-hidden bg-muted flex items-center justify-center">
                     <div
                       className="w-full h-full bg-cover bg-center group-hover:scale-110 transition-transform duration-500"
@@ -391,7 +391,7 @@ export default function ProductDetail() {
         </div>
       </main>
 
-      <footer className="mt-24 bg-[#1b1a18] text-white py-16 px-6">
+      <footer className="mt-24 bg-card text-foreground py-16 px-6">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="space-y-4">
             <h3 className="font-serif text-xl font-bold text-primary">
