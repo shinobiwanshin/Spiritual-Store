@@ -34,10 +34,10 @@ export default function RootLayout({
       <html
         lang="en"
         className={cn(
-          "light",
+          "dark",
           manrope.variable,
           playfair.variable,
-          inter.variable
+          inter.variable,
         )}
       >
         <head>
