@@ -33,6 +33,17 @@ interface CartState {
   getTotalPrice: () => number;
 }
 
+// Helper to map server cart item to CartProduct
+function mapServerItemToCartProduct(item: any): CartProduct {
+  return {
+    id: item.product.id,
+    title: item.product.title,
+    price: item.product.price,
+    image: item.product.images?.[0] || "",
+    quantity: item.quantity,
+  };
+}
+
 export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
@@ -45,17 +56,13 @@ export const useCartStore = create<CartState>()(
         set({ isLoading: true });
         try {
           const response = await axios.get("/api/cart");
-          if (response.data) {
+          if (response.data && Array.isArray(response.data)) {
             const cartProducts: CartProduct[] = response.data.map(
-              (item: any) => ({
-                id: item.product.id,
-                title: item.product.title,
-                price: item.product.price,
-                image: item.product.images?.[0] || "",
-                quantity: item.quantity,
-              }),
+              mapServerItemToCartProduct,
             );
             set({ items: cartProducts, isSynced: true });
+          } else {
+            set({ items: [], isSynced: true });
           }
         } catch (error) {
           console.error("Failed to fetch cart", error);
@@ -154,44 +161,48 @@ export const useCartStore = create<CartState>()(
       toggleCart: () => set({ isOpen: !get().isOpen }),
 
       syncCartOnLogin: async () => {
-        // Called when user logs in to merge local cart with server cart
         const localItems = get().items;
 
-        // First, fetch server cart
         try {
           const response = await axios.get("/api/cart");
-          const serverItems: CartProduct[] =
-            response.data?.map((item: any) => ({
-              id: item.product.id,
-              title: item.product.title,
-              price: item.product.price,
-              image: item.product.images?.[0] || "",
-              quantity: item.quantity,
-            })) || [];
+          const serverItems: CartProduct[] = Array.isArray(response.data)
+            ? response.data.map(mapServerItemToCartProduct)
+            : [];
 
           // Merge: Server items take priority, then add local items not on server
           const mergedItems: CartProduct[] = [...serverItems];
+          const localOnlyItems = localItems.filter(
+            (local) => !serverItems.some((server) => server.id === local.id),
+          );
 
-          for (const localItem of localItems) {
-            const existsOnServer = serverItems.find(
-              (s) => s.id === localItem.id,
-            );
-            if (!existsOnServer) {
-              // Add local item to server
-              try {
-                await axios.post("/api/cart", {
-                  productId: localItem.id,
-                  quantity: localItem.quantity,
-                });
-                mergedItems.push(localItem);
-              } catch {
-                // Ignore individual failures
-              }
+          // Sync local-only items to server in parallel
+          const syncResults = await Promise.allSettled(
+            localOnlyItems.map((localItem) =>
+              axios.post("/api/cart", {
+                productId: localItem.id,
+                quantity: localItem.quantity,
+              }),
+            ),
+          );
+
+          // Add successfully synced items to merged list
+          syncResults.forEach((result, index) => {
+            if (result.status === "fulfilled") {
+              mergedItems.push(localOnlyItems[index]);
+            } else {
+              // Keep failed items in local state (will retry on next sync)
+              mergedItems.push(localOnlyItems[index]);
+              console.error(
+                `Failed to sync item ${localOnlyItems[index].id}`,
+                result.reason,
+              );
             }
-          }
+          });
 
           set({ items: mergedItems, isSynced: true });
-          if (localItems.length > 0 && serverItems.length > 0) {
+
+          // Notify user if local items were synced
+          if (localOnlyItems.length > 0) {
             toast.success("Cart synced with your account");
           }
         } catch (error) {
@@ -212,6 +223,11 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: "astra-cart",
+      // Don't persist loading/sync state
+      partialize: (state) => ({
+        items: state.items,
+        isOpen: state.isOpen,
+      }),
     },
   ),
 );

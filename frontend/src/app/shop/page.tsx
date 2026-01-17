@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -381,17 +381,13 @@ export default function Shop() {
                           (p >= page - 1 && p <= page + 1),
                       )
                       .map((p, i, arr) => (
-                        <>
+                        <Fragment key={p}>
                           {i > 0 && arr[i - 1] !== p - 1 && (
-                            <span
-                              key={`sep-${p}`}
-                              className="px-2 text-muted-foreground"
-                            >
+                            <span className="px-2 text-muted-foreground">
                               ...
                             </span>
                           )}
                           <Button
-                            key={p}
                             variant={page === p ? "default" : "outline"}
                             size="icon"
                             onClick={() => setPage(p)}
@@ -399,7 +395,7 @@ export default function Shop() {
                           >
                             {p}
                           </Button>
-                        </>
+                        </Fragment>
                       ))}
 
                     <Button

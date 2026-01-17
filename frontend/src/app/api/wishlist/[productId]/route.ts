@@ -4,6 +4,11 @@ import { db } from "@/db";
 import { wishlistItems } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 
+/**
+ * DELETE /api/wishlist/[productId]
+ * Removes a specific product from the user's wishlist.
+ * Uses userId + productId to identify the entry (no need for wishlist item ID).
+ */
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ productId: string }> },
@@ -24,23 +29,20 @@ export async function DELETE(
       );
     }
 
-    // Note: The file path is [...] so params will carry the dynamic segment.
-    // Ideally the file should be named appropriately.
-    // If I name the directory [productId], then params.productId works.
-
-    // Logic: Delete where userId AND productId match.
-    // This allows deleting by product ID without knowing the wishlist item ID, which is convenient.
-
-    await db
+    const result = await db
       .delete(wishlistItems)
       .where(
         and(
           eq(wishlistItems.userId, userId),
           eq(wishlistItems.productId, productId),
         ),
-      );
+      )
+      .returning({ id: wishlistItems.id });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      deleted: result.length > 0,
+    });
   } catch (error) {
     console.error("Wishlist DELETE Error:", error);
     return NextResponse.json(

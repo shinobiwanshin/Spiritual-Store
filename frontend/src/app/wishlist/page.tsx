@@ -1,26 +1,87 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
+import QuickViewModal from "@/components/QuickViewModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
 
+// Product type expected by QuickViewModal
+interface QuickViewProduct {
+  id: string;
+  title: string;
+  category: string;
+  price: string;
+  originalPrice?: string;
+  discount?: string;
+  rating: number;
+  reviews: number;
+  images: string[];
+  description: string;
+  benefits?: string[];
+  howToWear?: {
+    bestDay: string;
+    bestTime: string;
+    mantra: string;
+  };
+  zodiacCompatibility?: string[];
+  isLabCertified?: boolean;
+}
+
 export default function Wishlist() {
   const { items, isLoading, fetchWishlist } = useWishlistStore();
   const { isSignedIn } = useAuth();
+  const [quickViewProduct, setQuickViewProduct] =
+    useState<QuickViewProduct | null>(null);
 
   useEffect(() => {
-    if (isSignedIn) {
+    if (isSignedIn === true) {
       fetchWishlist();
     }
   }, [isSignedIn, fetchWishlist]);
 
-  if (!isSignedIn) {
+  // Convert wishlist item to QuickView product format
+  const handleQuickView = (item: (typeof items)[0]) => {
+    const quickViewItem: QuickViewProduct = {
+      id: item.id,
+      title: item.title,
+      category: item.categoryName || "Spiritual",
+      price: item.price,
+      originalPrice: item.originalPrice || undefined,
+      discount: item.discount || undefined,
+      rating: item.rating || 4.5,
+      reviews: item.reviewsCount || 0,
+      images: item.images || [],
+      description: item.description || "",
+      isLabCertified: item.isLabCertified || false,
+    };
+    setQuickViewProduct(quickViewItem);
+  };
+
+  // Auth still loading - show loading state
+  if (isSignedIn === undefined) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex flex-col">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-spin">
+            <span className="material-symbols-outlined text-4xl text-primary">
+              progress_activity
+            </span>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Not signed in - show sign in prompt
+  if (isSignedIn === false) {
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col">
         <Navbar />
@@ -57,8 +118,9 @@ export default function Wishlist() {
               Your Wishlist
             </h1>
             <p className="text-muted-foreground max-w-md mx-auto">
-              {items.length} sacred items saved for later. Your spiritual
-              journey awaits.
+              {isLoading
+                ? "Loading your saved items..."
+                : `${items.length} sacred items saved for later. Your spiritual journey awaits.`}
             </p>
           </div>
         </div>
@@ -85,9 +147,10 @@ export default function Wishlist() {
                   category={item.categoryName || "Spiritual"}
                   price={item.price}
                   reviews={item.reviewsCount || 0}
-                  image={item.images[0] || ""}
+                  image={item.images?.[0] || ""}
                   originalPrice={item.originalPrice || undefined}
                   discount={item.discount || undefined}
+                  onQuickView={() => handleQuickView(item)}
                 />
               ))}
             </div>
@@ -147,6 +210,13 @@ export default function Wishlist() {
       </div>
 
       <Footer />
+
+      {/* QuickView Modal */}
+      <QuickViewModal
+        product={quickViewProduct}
+        isOpen={!!quickViewProduct}
+        onClose={() => setQuickViewProduct(null)}
+      />
     </div>
   );
 }

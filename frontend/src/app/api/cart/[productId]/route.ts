@@ -4,7 +4,11 @@ import { db } from "@/db";
 import { cartItems } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 
-// DELETE - Remove specific item from cart
+/**
+ * DELETE /api/cart/[productId]
+ * Removes a specific product from the user's cart.
+ * Uses userId + productId to identify the cart entry (no need for cart item ID).
+ */
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ productId: string }> },
@@ -25,13 +29,17 @@ export async function DELETE(
       );
     }
 
-    await db
+    const result = await db
       .delete(cartItems)
       .where(
         and(eq(cartItems.userId, userId), eq(cartItems.productId, productId)),
-      );
+      )
+      .returning({ id: cartItems.id });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      deleted: result.length > 0,
+    });
   } catch (error) {
     console.error("Cart Item DELETE Error:", error);
     return NextResponse.json(

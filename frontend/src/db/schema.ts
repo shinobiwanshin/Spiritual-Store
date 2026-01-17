@@ -87,6 +87,7 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   cartItems: many(cartItems),
   orderItems: many(orderItems),
   reviews: many(reviews),
+  wishlistItems: many(wishlistItems),
 }));
 
 // ============================================
@@ -392,7 +393,7 @@ export const coupons = pgTable(
   ],
 );
 
-export const couponsRelations = relations(coupons, () => ({}));
+// Coupons has no relations to other tables
 
 // ============================================
 // WISHLIST ITEMS

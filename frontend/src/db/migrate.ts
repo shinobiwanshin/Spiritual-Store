@@ -2,11 +2,29 @@ import { drizzle } from "drizzle-orm/neon-http";
 import { migrate } from "drizzle-orm/neon-http/migrator";
 import { neon } from "@neondatabase/serverless";
 import { config } from "dotenv";
-config({ path: ".env.local" });
+
+// Load environment variables with error handling
+const envResult = config({ path: ".env.local" });
+
+if (envResult.error) {
+  // In development, try fallback to .env
+  if (process.env.NODE_ENV !== "production") {
+    const fallbackResult = config();
+    if (fallbackResult.error) {
+      console.warn(
+        "⚠️  No .env.local or .env file found. Using environment variables.",
+      );
+    } else {
+      console.log("📄 Loaded environment from .env (fallback)");
+    }
+  }
+}
 
 const runMigrate = async () => {
   if (!process.env.DATABASE_URL) {
-    throw new Error("DATABASE_URL is not defined");
+    throw new Error(
+      "DATABASE_URL is not defined. Check your .env.local file or environment variables.",
+    );
   }
 
   console.log("⏳ Connecting to Neon database...");

@@ -24,8 +24,12 @@ export async function POST(request: NextRequest) {
       !items ||
       !Array.isArray(items) ||
       items.length === 0 ||
-      subtotal === undefined ||
-      total === undefined ||
+      typeof subtotal !== "number" ||
+      !Number.isFinite(subtotal) ||
+      subtotal < 0 ||
+      typeof total !== "number" ||
+      !Number.isFinite(total) ||
+      total < 0 ||
       !shipping_address
     ) {
       return NextResponse.json(

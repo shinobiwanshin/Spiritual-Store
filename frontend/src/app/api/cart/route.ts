@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { cartItems, products } from "@/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 
 // Validation schemas
@@ -47,7 +47,7 @@ export async function GET() {
   }
 }
 
-// POST - Add item to cart (or increment quantity if exists)
+// POST - Add item to cart (upsert with conflict handling)
 export async function POST(req: NextRequest) {
   try {
     const { userId } = await auth();
@@ -68,35 +68,32 @@ export async function POST(req: NextRequest) {
 
     const { productId, quantity } = validation.data;
 
-    // Check if item already in cart
-    const existing = await db.query.cartItems.findFirst({
-      where: and(
-        eq(cartItems.userId, userId),
-        eq(cartItems.productId, productId),
-      ),
+    // Verify product exists before inserting
+    const productExists = await db.query.products.findFirst({
+      where: eq(products.id, productId),
+      columns: { id: true },
     });
 
-    if (existing) {
-      // Update quantity
-      await db
-        .update(cartItems)
-        .set({ quantity: existing.quantity + quantity })
-        .where(eq(cartItems.id, existing.id));
-
-      return NextResponse.json({ success: true, action: "updated" });
+    if (!productExists) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    // Insert new item
-    await db.insert(cartItems).values({
-      userId,
-      productId,
-      quantity,
-    });
+    // Atomic upsert: insert or increment quantity on conflict
+    await db
+      .insert(cartItems)
+      .values({
+        userId,
+        productId,
+        quantity,
+      })
+      .onConflictDoUpdate({
+        target: [cartItems.userId, cartItems.productId],
+        set: {
+          quantity: sql`${cartItems.quantity} + ${quantity}`,
+        },
+      });
 
-    return NextResponse.json(
-      { success: true, action: "added" },
-      { status: 201 },
-    );
+    return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {
     console.error("Cart POST Error:", error);
     return NextResponse.json(
@@ -120,19 +117,27 @@ export async function PUT(req: NextRequest) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { error: "Invalid request body" },
+        { error: "Invalid request body", details: validation.error.flatten() },
         { status: 400 },
       );
     }
 
     const { productId, quantity } = validation.data;
 
-    await db
+    const result = await db
       .update(cartItems)
       .set({ quantity })
       .where(
         and(eq(cartItems.userId, userId), eq(cartItems.productId, productId)),
+      )
+      .returning({ id: cartItems.id });
+
+    if (result.length === 0) {
+      return NextResponse.json(
+        { success: false, message: "Cart item not found" },
+        { status: 404 },
       );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

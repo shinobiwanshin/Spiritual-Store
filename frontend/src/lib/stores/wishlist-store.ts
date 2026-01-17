@@ -4,9 +4,25 @@ import axios from "axios";
 import { toast } from "sonner";
 import { Product } from "@/db/schema";
 
+// API response type for type safety
+interface WishlistApiItem {
+  id: string;
+  addedAt: string;
+  product: Product;
+  categoryName: string | null;
+}
+
 // Extended Product with category name for display
 interface WishlistProduct extends Product {
   categoryName?: string | null;
+}
+
+// Minimal type for adding items (doesn't require full Product)
+export interface WishlistAddItem {
+  id: string;
+  title: string;
+  price: string;
+  images: string[];
 }
 
 interface WishlistState {
@@ -15,7 +31,7 @@ interface WishlistState {
 
   // Actions
   fetchWishlist: () => Promise<void>;
-  addItem: (product: Product) => Promise<void>;
+  addItem: (product: WishlistAddItem) => Promise<void>;
   removeItem: (productId: string) => Promise<void>;
   isInWishlist: (productId: string) => boolean;
   clearWishlist: () => void;
@@ -31,21 +47,25 @@ export const useWishlistStore = create<WishlistState>()(
         set({ isLoading: true });
         try {
           const response = await axios.get("/api/wishlist");
-          // Expecting response to be array of objects with { product: Product }
-          // Based on API implementation:
-          // const userWishlist = await db.select({ ..., product: products })...
+          // API returns { items: [...], pagination: {...} } or legacy array
+          const data = response.data;
+          const wishlistData = Array.isArray(data) ? data : data?.items;
 
-          if (response.data) {
-            const products: WishlistProduct[] = response.data.map(
-              (item: any) => ({
+          if (wishlistData && Array.isArray(wishlistData)) {
+            const products: WishlistProduct[] = wishlistData.map(
+              (item: WishlistApiItem) => ({
                 ...item.product,
                 categoryName: item.categoryName,
               }),
             );
             set({ items: products });
+          } else {
+            set({ items: [] });
           }
         } catch (error) {
           console.error("Failed to fetch wishlist", error);
+          toast.error("Failed to load wishlist");
+          set({ items: [] });
         } finally {
           set({ isLoading: false });
         }
@@ -56,14 +76,20 @@ export const useWishlistStore = create<WishlistState>()(
         const currentItems = get().items;
         if (currentItems.some((item) => item.id === product.id)) return;
 
-        set({ items: [...currentItems, product] });
-        toast.success("Added to wishlist");
+        // Add with minimal info for optimistic UI
+        set({
+          items: [
+            ...currentItems,
+            { ...product, categoryName: null } as WishlistProduct,
+          ],
+        });
 
         try {
           await axios.post("/api/wishlist", { productId: product.id });
+          toast.success("Added to wishlist");
         } catch (error) {
           console.error("Failed to add to wishlist", error);
-          toast.error("Failed to sync wishlist");
+          toast.error("Failed to add to wishlist");
           // Revert on failure
           set({ items: currentItems });
         }
@@ -73,13 +99,13 @@ export const useWishlistStore = create<WishlistState>()(
         // Optimistic update
         const currentItems = get().items;
         set({ items: currentItems.filter((item) => item.id !== productId) });
-        toast.success("Removed from wishlist");
 
         try {
           await axios.delete(`/api/wishlist/${productId}`);
+          toast.success("Removed from wishlist");
         } catch (error) {
           console.error("Failed to remove from wishlist", error);
-          toast.error("Failed to sync wishlist");
+          toast.error("Failed to remove from wishlist");
           // Revert
           set({ items: currentItems });
         }
@@ -93,6 +119,8 @@ export const useWishlistStore = create<WishlistState>()(
     }),
     {
       name: "astra-wishlist",
+      // Don't persist loading state
+      partialize: (state) => ({ items: state.items }),
     },
   ),
 );

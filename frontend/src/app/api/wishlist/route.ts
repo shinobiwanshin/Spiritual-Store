@@ -2,13 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { wishlistItems, products, categories } from "@/db/schema";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import { z } from "zod";
 
-// Validations
+// Validation schema
 const addItemSchema = z.object({
   productId: z.string().uuid(),
 });
+
+// Pagination defaults
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 100;
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,6 +21,17 @@ export async function GET(req: NextRequest) {
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Parse pagination params
+    const { searchParams } = new URL(req.url);
+    const limitParam = parseInt(
+      searchParams.get("limit") || String(DEFAULT_LIMIT),
+      10,
+    );
+    const offsetParam = parseInt(searchParams.get("offset") || "0", 10);
+
+    const limit = Math.min(Math.max(1, limitParam || DEFAULT_LIMIT), MAX_LIMIT);
+    const offset = Math.max(0, offsetParam || 0);
 
     // Fetch wishlist items with product details and category name
     const userWishlist = await db
@@ -30,9 +45,27 @@ export async function GET(req: NextRequest) {
       .innerJoin(products, eq(wishlistItems.productId, products.id))
       .leftJoin(categories, eq(products.categoryId, categories.id))
       .where(eq(wishlistItems.userId, userId))
-      .orderBy(desc(wishlistItems.createdAt));
+      .orderBy(desc(wishlistItems.createdAt))
+      .limit(limit)
+      .offset(offset);
 
-    return NextResponse.json(userWishlist);
+    // Get total count for pagination metadata
+    const countResult = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(wishlistItems)
+      .where(eq(wishlistItems.userId, userId));
+
+    const total = countResult[0]?.count || 0;
+
+    return NextResponse.json({
+      items: userWishlist,
+      pagination: {
+        total,
+        limit,
+        offset,
+        hasMore: offset + userWishlist.length < total,
+      },
+    });
   } catch (error) {
     console.error("Wishlist GET Error:", error);
     return NextResponse.json(
@@ -42,6 +75,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// POST - Add item to wishlist (atomic insert with conflict handling)
 export async function POST(req: NextRequest) {
   try {
     const { userId } = await auth();
@@ -55,39 +89,41 @@ export async function POST(req: NextRequest) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { error: "Invalid product ID" },
+        { error: "Invalid product ID", details: validation.error.flatten() },
         { status: 400 },
       );
     }
 
     const { productId } = validation.data;
 
-    // Check if already exists to prevent duplicates (though DB has unique constraint)
-    // We can use onConflictDoNothing or just let it fail/check first.
-    // Let's check first to return a specific message or just toggle?
-    // The requirement says "Add item (toggle)" in plan, but API is POST.
-    // Usually POST is add. DELETE is remove.
-    // If frontend handles toggle, it calls POST or DELETE.
-    // I will implement strictly ADD here.
-
-    const existing = await db.query.wishlistItems.findFirst({
-      where: and(
-        eq(wishlistItems.userId, userId),
-        eq(wishlistItems.productId, productId),
-      ),
+    // Verify product exists
+    const productExists = await db.query.products.findFirst({
+      where: eq(products.id, productId),
+      columns: { id: true },
     });
 
-    if (existing) {
-      return NextResponse.json(
-        { message: "Item already in wishlist" },
-        { status: 200 }, // Or 409 Conflict
-      );
+    if (!productExists) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    await db.insert(wishlistItems).values({
-      userId,
-      productId,
-    });
+    // Atomic insert with conflict handling (ignore duplicates)
+    const result = await db
+      .insert(wishlistItems)
+      .values({
+        userId,
+        productId,
+      })
+      .onConflictDoNothing({
+        target: [wishlistItems.userId, wishlistItems.productId],
+      })
+      .returning({ id: wishlistItems.id });
+
+    if (result.length === 0) {
+      return NextResponse.json(
+        { message: "Item already in wishlist" },
+        { status: 200 },
+      );
+    }
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {

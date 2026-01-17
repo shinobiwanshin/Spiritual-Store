@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/lib/stores/cart-store";
-import { useWishlistStore } from "@/lib/stores/wishlist-store";
+import { useWishlistStore, WishlistAddItem } from "@/lib/stores/wishlist-store";
 import { toast } from "sonner";
 
 interface ProductCardProps {
@@ -90,21 +90,22 @@ export default function ProductCard({
                 if (inWishlist) {
                   removeFromWishlist(id);
                 } else {
-                  addToWishlist({
+                  // Properly typed wishlist item
+                  const wishlistItem: WishlistAddItem = {
                     id,
                     title,
                     price,
                     images: [image],
-                    // Partial product object for store optimistic updates
-                    // The store expects Product type, here we pass relevant UI fields
-                    // Using 'as any' to bypass strict schema checks for now since we lack full data
-                  } as any);
+                  };
+                  addToWishlist(wishlistItem);
                 }
               });
             }}
           >
+            {/* Material Symbols with filled style when in wishlist */}
             <span
-              className={`material-symbols-outlined text-lg ${inWishlist ? "fill-current" : ""}`}
+              className="material-symbols-outlined text-lg"
+              style={inWishlist ? { fontVariationSettings: "'FILL' 1" } : {}}
             >
               favorite
             </span>
