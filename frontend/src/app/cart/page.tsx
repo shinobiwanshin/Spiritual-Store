@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
-import { SignedIn, SignedOut, RedirectToSignIn } from "@clerk/nextjs";
+import { SignedIn, SignedOut, RedirectToSignIn, useAuth } from "@clerk/nextjs";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -10,8 +11,22 @@ import { Separator } from "@/components/ui/separator";
 import { useCartStore } from "@/lib/stores/cart-store";
 
 export default function CartPage() {
-  const { items, removeItem, updateQuantity, getTotalPrice, clearCart } =
-    useCartStore();
+  const {
+    items,
+    removeItem,
+    updateQuantity,
+    getTotalPrice,
+    clearCart,
+    fetchCart,
+    isLoading,
+  } = useCartStore();
+  const { isSignedIn } = useAuth();
+
+  useEffect(() => {
+    if (isSignedIn) {
+      fetchCart();
+    }
+  }, [isSignedIn, fetchCart]);
 
   const subtotal = getTotalPrice();
   const shipping = 0;
@@ -27,7 +42,7 @@ export default function CartPage() {
           <Navbar />
 
           {/* Hero Section */}
-          <section className="pt-24 pb-8 bg-gradient-to-b from-primary/5 to-background">
+          <section className="pt-24 pb-8 bg-linear-to-b from-primary/5 to-background">
             <div className="max-w-7xl mx-auto px-6 py-8">
               <div className="flex items-center gap-4">
                 <div className="size-14 bg-primary/10 rounded-full flex items-center justify-center">

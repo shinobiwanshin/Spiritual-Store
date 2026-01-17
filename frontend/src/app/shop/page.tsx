@@ -158,7 +158,7 @@ export default function Shop() {
       <Navbar />
 
       {/* Hero Banner */}
-      <section className="pt-24 pb-12 bg-gradient-to-b from-primary/5 via-background to-background relative overflow-hidden">
+      <section className="pt-24 pb-12 bg-linear-to-b from-primary/5 via-background to-background relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="text-center space-y-4 py-8">
             <Badge
@@ -341,7 +341,7 @@ export default function Shop() {
                 {[1, 2, 3, 4, 5, 6].map((i) => (
                   <div
                     key={i}
-                    className="aspect-[3/4] bg-muted/20 animate-pulse rounded-xl"
+                    className="aspect-3/4 bg-muted/20 animate-pulse rounded-xl"
                   />
                 ))}
               </div>

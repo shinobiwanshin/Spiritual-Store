@@ -143,7 +143,7 @@ export default function ProductDetail() {
                   backgroundImage: `url('${product.images[activeImage]}')`,
                 }}
               ></div>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
+              <div className="absolute inset-0 bg-linear-to-t from-black/20 via-transparent to-transparent"></div>
               <Button
                 variant="secondary"
                 size="icon"

@@ -68,6 +68,14 @@ export const products = pgTable(
       "products_rating_valid",
       sql`${table.rating} >= 0 AND ${table.rating} <= 5`,
     ),
+    check(
+      "products_original_price_valid",
+      sql`${table.originalPrice} IS NULL OR ${table.originalPrice} > 0`,
+    ),
+    check(
+      "products_reviews_count_nonnegative",
+      sql`${table.reviewsCount} >= 0`,
+    ),
   ],
 );
 
@@ -204,7 +212,7 @@ export const orders = pgTable(
     index("idx_orders_user_status").on(table.userId, table.status),
     check(
       "orders_amounts_positive",
-      sql`${table.subtotal} >= 0 AND ${table.shippingCost} >= 0 AND ${table.total} >= 0`,
+      sql`${table.subtotal} >= 0 AND ${table.shippingCost} >= 0 AND ${table.total} >= 0 AND ${table.discount} >= 0`,
     ),
   ],
 );
@@ -374,6 +382,9 @@ export const coupons = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
   (table) => [
     check("coupons_usage_check", sql`${table.usedCount} >= 0`),
@@ -382,6 +393,34 @@ export const coupons = pgTable(
 );
 
 export const couponsRelations = relations(coupons, () => ({}));
+
+// ============================================
+// WISHLIST ITEMS
+// ============================================
+export const wishlistItems = pgTable(
+  "wishlist_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    productId: uuid("product_id")
+      .references(() => products.id, { onDelete: "cascade" })
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("idx_wishlist_items_user").on(table.userId),
+    unique("unique_user_wishlist_product").on(table.userId, table.productId),
+  ],
+);
+
+export const wishlistItemsRelations = relations(wishlistItems, ({ one }) => ({
+  product: one(products, {
+    fields: [wishlistItems.productId],
+    references: [products.id],
+  }),
+}));
 
 // ============================================
 // TYPE EXPORTS
@@ -395,6 +434,7 @@ export type OrderItem = typeof orderItems.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
 export type Review = typeof reviews.$inferSelect;
 export type Coupon = typeof coupons.$inferSelect;
+export type WishlistItem = typeof wishlistItems.$inferSelect;
 
 export type NewCategory = typeof categories.$inferInsert;
 export type NewProduct = typeof products.$inferInsert;
@@ -405,3 +445,4 @@ export type NewOrderItem = typeof orderItems.$inferInsert;
 export type NewPayment = typeof payments.$inferInsert;
 export type NewReview = typeof reviews.$inferInsert;
 export type NewCoupon = typeof coupons.$inferInsert;
+export type NewWishlistItem = typeof wishlistItems.$inferInsert;

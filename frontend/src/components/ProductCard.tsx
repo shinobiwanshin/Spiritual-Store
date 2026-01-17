@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/lib/stores/cart-store";
+import { useWishlistStore } from "@/lib/stores/wishlist-store";
 import { toast } from "sonner";
 
 interface ProductCardProps {
@@ -34,6 +35,13 @@ export default function ProductCard({
   const { isSignedIn } = useAuth();
   const { openSignIn } = useClerk();
   const addItem = useCartStore((state) => state.addItem);
+
+  const {
+    addItem: addToWishlist,
+    removeItem: removeFromWishlist,
+    isInWishlist,
+  } = useWishlistStore();
+  const inWishlist = isInWishlist(id);
 
   const handleAuthAction = (action: () => void) => {
     if (!isSignedIn) {
@@ -70,15 +78,38 @@ export default function ProductCard({
           <Button
             size="icon"
             variant="secondary"
-            className="size-10 rounded-full bg-white text-primary shadow-xl hover:bg-primary hover:text-white hover:scale-110 transition-all duration-300"
+            className={`size-10 rounded-full bg-white shadow-xl hover:scale-110 transition-all duration-300 ${
+              inWishlist
+                ? "text-red-500 hover:bg-red-50 hover:text-red-600"
+                : "text-primary hover:bg-primary hover:text-white"
+            }`}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              handleAuthAction(() => toast.success("Added to wishlist!"));
+              handleAuthAction(() => {
+                if (inWishlist) {
+                  removeFromWishlist(id);
+                } else {
+                  addToWishlist({
+                    id,
+                    title,
+                    price,
+                    images: [image],
+                    // Partial product object for store optimistic updates
+                    // The store expects Product type, here we pass relevant UI fields
+                    // Using 'as any' to bypass strict schema checks for now since we lack full data
+                  } as any);
+                }
+              });
             }}
           >
-            <span className="material-symbols-outlined text-lg">favorite</span>
+            <span
+              className={`material-symbols-outlined text-lg ${inWishlist ? "fill-current" : ""}`}
+            >
+              favorite
+            </span>
           </Button>
+
           <Button
             size="icon"
             variant="secondary"

@@ -49,7 +49,9 @@ CREATE TABLE "coupons" (
 	CONSTRAINT "coupons_code_unique" UNIQUE("code"),
 	CONSTRAINT "coupons_usage_check" CHECK ("used_count" >= 0),
 	CONSTRAINT "coupons_discount_value_positive" CHECK ("discount_value" > 0),
-	CONSTRAINT "coupons_discount_type_check" CHECK ("discount_type" IN ('percentage','fixed'))
+	CONSTRAINT "coupons_discount_type_check" CHECK ("discount_type" IN ('percentage','fixed')),
+    CONSTRAINT "coupons_percentage_max" CHECK ("discount_type" != 'percentage' OR "discount_value" <= 100),
+    CONSTRAINT "coupons_validity_check" CHECK ("valid_from" IS NULL OR "valid_until" IS NULL OR "valid_from" < "valid_until")
 );
 --> statement-breakpoint
 CREATE TABLE "order_items" (
@@ -82,7 +84,7 @@ CREATE TABLE "orders" (
 	"updated_at" timestamp with time zone DEFAULT now(),
 	CONSTRAINT "orders_razorpay_order_id_unique" UNIQUE("razorpay_order_id"),
 	CONSTRAINT "orders_status_valid" CHECK ("status" IN ('pending','paid','processing','shipped','delivered','cancelled','refunded','confirmed')),
-	CONSTRAINT "orders_amounts_positive" CHECK ("subtotal" >= 0 AND "shipping_cost" >= 0 AND "total" >= 0)
+	CONSTRAINT "orders_amounts_positive" CHECK ("subtotal" >= 0 AND "shipping_cost" >= 0 AND "total" >= 0 AND "discount" >= 0)
 );
 --> statement-breakpoint
 CREATE TABLE "payments" (
@@ -123,7 +125,9 @@ CREATE TABLE "products" (
 	CONSTRAINT "products_slug_unique" UNIQUE("slug"),
 	CONSTRAINT "products_price_positive" CHECK ("price" > 0),
 	CONSTRAINT "products_stock_positive" CHECK ("stock" >= 0),
-	CONSTRAINT "products_rating_valid" CHECK ("rating" >= 0 AND "rating" <= 5)
+	CONSTRAINT "products_rating_valid" CHECK ("rating" >= 0 AND "rating" <= 5),
+    CONSTRAINT "products_original_price_valid" CHECK ("original_price" IS NULL OR "original_price" > 0),
+    CONSTRAINT "products_reviews_count_nonnegative" CHECK ("reviews_count" >= 0)
 );
 --> statement-breakpoint
 CREATE TABLE "reviews" (
@@ -149,7 +153,6 @@ CREATE INDEX "idx_addresses_user" ON "addresses" USING btree ("user_id");--> sta
 CREATE INDEX "idx_cart_items_user" ON "cart_items" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "idx_order_items_order" ON "order_items" USING btree ("order_id");--> statement-breakpoint
 CREATE INDEX "idx_order_items_product" ON "order_items" USING btree ("product_id");--> statement-breakpoint
-CREATE INDEX "idx_orders_user" ON "orders" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "idx_orders_status" ON "orders" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "idx_orders_user_status" ON "orders" USING btree ("user_id","status");--> statement-breakpoint
 CREATE INDEX "idx_orders_created" ON "orders" USING btree ("created_at");--> statement-breakpoint

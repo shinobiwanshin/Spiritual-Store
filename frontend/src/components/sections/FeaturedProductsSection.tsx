@@ -59,7 +59,7 @@ export default function FeaturedProductsSection() {
             ? [1, 2, 3, 4].map((i) => (
                 <div
                   key={i}
-                  className="aspect-[3/4] bg-muted/20 animate-pulse rounded-xl"
+                  className="aspect-3/4 bg-muted/20 animate-pulse rounded-xl"
                 />
               ))
             : featuredProducts.map((product) => (

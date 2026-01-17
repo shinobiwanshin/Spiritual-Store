@@ -16,7 +16,7 @@ export default function RashiPage() {
 
       {/* Hero Section */}
       <section className="pt-24 pb-16 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-background to-background"></div>
+        <div className="absolute inset-0 bg-linear-to-b from-primary/10 via-background to-background"></div>
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/indian-pattern.png')] opacity-5"></div>
 
         {/* Decorative Elements */}
@@ -26,7 +26,7 @@ export default function RashiPage() {
 
         <div className="max-w-4xl mx-auto px-6 relative z-10 text-center space-y-6">
           {/* Om Symbol */}
-          <div className="size-28 mx-auto bg-gradient-to-br from-primary to-primary/60 rounded-full flex items-center justify-center shadow-2xl shadow-primary/30 mb-8 border-4 border-white/20">
+          <div className="size-28 mx-auto bg-linear-to-br from-primary to-primary/60 rounded-full flex items-center justify-center shadow-2xl shadow-primary/30 mb-8 border-4 border-white/20">
             <span className="text-5xl text-white font-serif">ॐ</span>
           </div>
 
