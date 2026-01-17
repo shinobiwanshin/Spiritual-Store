@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import Razorpay from "razorpay";
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
+// Lazy initialization to avoid build-time errors when env vars are not set
+let razorpay: Razorpay | null = null;
+
+function getRazorpay(): Razorpay | null {
+  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    return null;
+  }
+  if (!razorpay) {
+    razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+  }
+  return razorpay;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,6 +28,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const razorpayInstance = getRazorpay();
+
+    // If Razorpay is not configured, return a mock response for development/demo
+    if (!razorpayInstance) {
+      console.warn("Razorpay not configured. Returning mock order.");
+      return NextResponse.json({
+        orderId: `mock_order_${Date.now()}`,
+        amount: Math.round(amount * 100),
+        currency,
+        mock: true,
+        message: "Payment gateway not configured. This is a demo order.",
+      });
+    }
+
     const options = {
       amount: Math.round(amount * 100), // Razorpay expects amount in paise
       currency,
@@ -24,7 +49,7 @@ export async function POST(request: NextRequest) {
       notes: notes || {},
     };
 
-    const order = await razorpay.orders.create(options);
+    const order = await razorpayInstance.orders.create(options);
 
     return NextResponse.json({
       orderId: order.id,
