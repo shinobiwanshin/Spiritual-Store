@@ -9,6 +9,16 @@ export async function GET(
   try {
     const { id } = await params;
 
+    // Validate UUID format
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return NextResponse.json(
+        { error: "Invalid product ID format" },
+        { status: 400 },
+      );
+    }
+
     const [product] = await db
       .select({
         id: products.id,

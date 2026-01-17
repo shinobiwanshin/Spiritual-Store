@@ -24,4 +24,7 @@ const runMigrate = async () => {
   }
 };
 
-runMigrate();
+runMigrate().catch((err) => {
+  console.error("❌ Migration setup error:", err);
+  process.exit(1);
+});

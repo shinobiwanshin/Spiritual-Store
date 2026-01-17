@@ -29,52 +29,17 @@ const runSeed = async () => {
     for (const categoryName of uniqueCategories) {
       const slug = categoryName.toLowerCase().replace(/ /g, "-");
 
-      const [insertedCategory] = await db
+      await db
         .insert(categories)
         .values({
           name: categoryName,
           slug: slug,
           description: `All ${categoryName} products`,
         })
-        .onConflictDoUpdate({
-          target: categories.name,
-          set: { name: categoryName }, // No-op update to get the ID if exists
-        })
-        .returning();
-
-      // If onConflictDoUpdate doesn't return (if nothing changed), we need to fetch it
-      if (insertedCategory) {
-        categoryMap.set(categoryName, insertedCategory.id);
-      } else {
-        const [existingCategory] = await db
-          .select()
-          .from(categories)
-          .where(categories.name, categoryName); // This syntax might be wrong for drizzle, fixing below
-        // Actually for simplicity, let's just delete all and insert fresh or handle simpler
-      }
+        .onConflictDoNothing();
     }
 
-    // Correct approach for categories:
-    // It's safer to just fetch all categories after insertion to build the map
-    // But since we are seeding, maybe just clear tables first?
-    // Let's try a safer upsert approach.
-
-    // Let's actually fetch the categories after attempting insert to be sure
-    const dbCategories = await db.select().from(categories);
-    // If empty, re-insert.
-
-    if (dbCategories.length === 0) {
-      for (const categoryName of uniqueCategories) {
-        const slug = categoryName.toLowerCase().replace(/ /g, "-");
-        await db.insert(categories).values({
-          name: categoryName,
-          slug: slug,
-          description: `All ${categoryName} products`,
-        });
-      }
-    }
-
-    // Refresh category map
+    // Fetch all categories to populate map
     const allCategories = await db.select().from(categories);
     allCategories.forEach((c) => categoryMap.set(c.name, c.id));
 
@@ -111,7 +76,10 @@ const runSeed = async () => {
         stock: 50, // Default stock
       };
 
-      await db.insert(products).values(productValues).onConflictDoNothing();
+      await db.insert(products).values(productValues).onConflictDoUpdate({
+        target: products.slug,
+        set: productValues,
+      });
     }
 
     console.log("✅ Database seeded successfully");
@@ -121,4 +89,7 @@ const runSeed = async () => {
   }
 };
 
-runSeed();
+runSeed().catch((err) => {
+  console.error("❌ Unhandled seed error:", err);
+  process.exit(1);
+});

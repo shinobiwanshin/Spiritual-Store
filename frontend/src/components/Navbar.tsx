@@ -61,6 +61,7 @@ export default function Navbar() {
           <Button
             variant="ghost"
             size="icon"
+            aria-label="Search"
             className="rounded-full hover:bg-primary/10 hover:text-primary transition-colors"
           >
             <span className="material-symbols-outlined">search</span>
@@ -71,6 +72,7 @@ export default function Navbar() {
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Wishlist"
               className="rounded-full hover:bg-primary/10 hover:text-primary transition-colors"
             >
               <span className="material-symbols-outlined">favorite</span>
@@ -82,6 +84,7 @@ export default function Navbar() {
             <Button
               variant="ghost"
               size="icon"
+              aria-label="View Cart"
               className="rounded-full hover:bg-primary/10 hover:text-primary transition-colors relative"
             >
               <span className="material-symbols-outlined">shopping_bag</span>
@@ -117,6 +120,7 @@ export default function Navbar() {
           <Button
             variant="ghost"
             size="icon"
+            aria-label="Open Menu"
             className="lg:hidden rounded-full hover:bg-primary/10"
           >
             <span className="material-symbols-outlined">menu</span>

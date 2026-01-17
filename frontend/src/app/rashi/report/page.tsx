@@ -31,7 +31,7 @@ export default function RashiReport() {
 
       {/* Hero Result Section */}
       <section className="pt-24 pb-12 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/10 to-background"></div>
+        <div className="absolute inset-0 bg-linear-to-b from-primary/10 to-background"></div>
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30"></div>
 
         <div className="max-w-4xl mx-auto px-6 relative z-10 text-center">
@@ -39,7 +39,7 @@ export default function RashiReport() {
             Your Rashi Report
           </Badge>
 
-          <div className="size-32 mx-auto bg-gradient-to-br from-primary to-primary/60 rounded-full flex items-center justify-center shadow-2xl shadow-primary/30 mb-6 border-4 border-white/20">
+          <div className="size-32 mx-auto bg-linear-to-br from-primary to-primary/60 rounded-full flex items-center justify-center shadow-2xl shadow-primary/30 mb-6 border-4 border-white/20">
             <span className="text-6xl text-white">{rashiData.symbol}</span>
           </div>
 
@@ -127,7 +127,7 @@ export default function RashiReport() {
           {/* Gemstone Card */}
           <Card className="border-primary/20 overflow-hidden">
             <div className="flex flex-col md:flex-row">
-              <div className="md:w-1/3 h-48 md:h-auto bg-gradient-to-br from-red-500/20 to-red-600/10 flex items-center justify-center">
+              <div className="md:w-1/3 h-48 md:h-auto bg-linear-to-br from-red-500/20 to-red-600/10 flex items-center justify-center">
                 <span className="material-symbols-outlined text-6xl text-red-500">
                   diamond
                 </span>
@@ -157,7 +157,7 @@ export default function RashiReport() {
           {/* Rudraksha Card */}
           <Card className="border-primary/20 overflow-hidden">
             <div className="flex flex-col md:flex-row">
-              <div className="md:w-1/3 h-48 md:h-auto bg-gradient-to-br from-amber-500/20 to-amber-600/10 flex items-center justify-center">
+              <div className="md:w-1/3 h-48 md:h-auto bg-linear-to-br from-amber-500/20 to-amber-600/10 flex items-center justify-center">
                 <span className="material-symbols-outlined text-6xl text-amber-600">
                   self_improvement
                 </span>
@@ -185,7 +185,7 @@ export default function RashiReport() {
           </Card>
 
           {/* Mantra Card */}
-          <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+          <Card className="bg-linear-to-r from-primary/5 to-primary/10 border-primary/20">
             <CardContent className="p-8 text-center space-y-4">
               <span className="material-symbols-outlined text-4xl text-primary">
                 format_quote

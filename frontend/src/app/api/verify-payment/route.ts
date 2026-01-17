@@ -16,6 +16,24 @@ export async function POST(request: NextRequest) {
       shipping_address,
     } = await request.json();
 
+    if (
+      !razorpay_order_id ||
+      !razorpay_payment_id ||
+      !razorpay_signature ||
+      !user_id ||
+      !items ||
+      !Array.isArray(items) ||
+      items.length === 0 ||
+      subtotal === undefined ||
+      total === undefined ||
+      !shipping_address
+    ) {
+      return NextResponse.json(
+        { error: "Invalid or missing required payment details" },
+        { status: 400 },
+      );
+    }
+
     // Verify payment signature
     const body = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSignature = crypto

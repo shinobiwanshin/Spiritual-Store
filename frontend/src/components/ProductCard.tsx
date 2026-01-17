@@ -51,6 +51,8 @@ export default function ProductCard({
           <div
             className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-110"
             style={{ backgroundImage: `url('${image}')` }}
+            role="img"
+            aria-label={title}
           />
           {/* Overlay on Hover */}
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />

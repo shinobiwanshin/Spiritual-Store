@@ -4,13 +4,24 @@ import { eq, ilike, or, and, sql } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    const searchParams = request.nextUrl.searchParams;
     const category = searchParams.get("category");
     const search = searchParams.get("search");
-    const limit = parseInt(searchParams.get("limit") || "12");
-    const page = parseInt(searchParams.get("page") || "1");
-    const minPrice = searchParams.get("minPrice");
-    const maxPrice = searchParams.get("maxPrice");
+
+    // Safe parse integers with limits
+    const MAX_LIMIT = 100;
+    const limitParam = searchParams.get("limit");
+    const pageParam = searchParams.get("page");
+    const limit = limitParam
+      ? Math.max(1, Math.min(parseInt(limitParam) || 12, MAX_LIMIT))
+      : 12;
+    const page = pageParam ? Math.max(1, parseInt(pageParam) || 1) : 1;
+
+    const minPriceParam = searchParams.get("minPrice");
+    const maxPriceParam = searchParams.get("maxPrice");
+    const minPrice = minPriceParam ? parseFloat(minPriceParam) : undefined;
+    const maxPrice = maxPriceParam ? parseFloat(maxPriceParam) : undefined;
+
     const offset = (page - 1) * limit;
 
     const exclude = searchParams.get("exclude");
@@ -22,7 +33,9 @@ export async function GET(request: NextRequest) {
       conditions.push(eq(categories.name, category));
     }
 
-    if (exclude) {
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (exclude && uuidRegex.test(exclude)) {
       conditions.push(sql`${products.id} != ${exclude}`);
     }
 

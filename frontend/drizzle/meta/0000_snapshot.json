@@ -162,12 +162,8 @@
           "name": "cart_items_product_id_products_id_fk",
           "tableFrom": "cart_items",
           "tableTo": "products",
-          "columnsFrom": [
-            "product_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["product_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -177,14 +173,16 @@
         "unique_user_product": {
           "name": "unique_user_product",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "product_id"
-          ]
+          "columns": ["user_id", "product_id"]
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "cart_items_quantity_positive": {
+          "name": "cart_items_quantity_positive",
+          "value": "quantity > 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.categories": {
@@ -237,16 +235,12 @@
         "categories_name_unique": {
           "name": "categories_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
+          "columns": ["name"]
         },
         "categories_slug_unique": {
           "name": "categories_slug_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "slug"
-          ]
+          "columns": ["slug"]
         }
       },
       "policies": {},
@@ -341,13 +335,24 @@
         "coupons_code_unique": {
           "name": "coupons_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
+          "columns": ["code"]
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "coupons_usage_check": {
+          "name": "coupons_usage_check",
+          "value": "\"used_count\" >= 0"
+        },
+        "coupons_discount_value_positive": {
+          "name": "coupons_discount_value_positive",
+          "value": "\"discount_value\" > 0"
+        },
+        "coupons_discount_type_check": {
+          "name": "coupons_discount_type_check",
+          "value": "\"discount_type\" IN ('percentage','fixed')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.order_items": {
@@ -442,12 +447,8 @@
           "name": "order_items_order_id_orders_id_fk",
           "tableFrom": "order_items",
           "tableTo": "orders",
-          "columnsFrom": [
-            "order_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["order_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -455,12 +456,8 @@
           "name": "order_items_product_id_products_id_fk",
           "tableFrom": "order_items",
           "tableTo": "products",
-          "columnsFrom": [
-            "product_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["product_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -468,7 +465,16 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "order_items_quantity_positive": {
+          "name": "order_items_quantity_positive",
+          "value": "quantity > 0"
+        },
+        "order_items_price_positive": {
+          "name": "order_items_price_positive",
+          "value": "price >= 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.orders": {
@@ -619,13 +625,20 @@
         "orders_razorpay_order_id_unique": {
           "name": "orders_razorpay_order_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "razorpay_order_id"
-          ]
+          "columns": ["razorpay_order_id"]
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "orders_status_valid": {
+          "name": "orders_status_valid",
+          "value": "\"status\" IN ('pending','paid','processing','shipped','delivered','cancelled','refunded','confirmed')"
+        },
+        "orders_amounts_positive": {
+          "name": "orders_amounts_positive",
+          "value": "\"subtotal\" >= 0 AND \"shipping_cost\" >= 0 AND \"total\" >= 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.payments": {
@@ -719,12 +732,8 @@
           "name": "payments_order_id_orders_id_fk",
           "tableFrom": "payments",
           "tableTo": "orders",
-          "columnsFrom": [
-            "order_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["order_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -734,13 +743,20 @@
         "payments_razorpay_payment_id_unique": {
           "name": "payments_razorpay_payment_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "razorpay_payment_id"
-          ]
+          "columns": ["razorpay_payment_id"]
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "payments_amount_positive": {
+          "name": "payments_amount_positive",
+          "value": "amount > 0"
+        },
+        "payments_status_valid": {
+          "name": "payments_status_valid",
+          "value": "\"status\" IN ('created','authorized','captured','failed','refunded','pending','completed')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.products": {
@@ -904,12 +920,8 @@
           "name": "products_category_id_categories_id_fk",
           "tableFrom": "products",
           "tableTo": "categories",
-          "columnsFrom": [
-            "category_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["category_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -919,13 +931,24 @@
         "products_slug_unique": {
           "name": "products_slug_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "slug"
-          ]
+          "columns": ["slug"]
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "products_price_positive": {
+          "name": "products_price_positive",
+          "value": "price > 0"
+        },
+        "products_stock_positive": {
+          "name": "products_stock_positive",
+          "value": "stock >= 0"
+        },
+        "products_rating_valid": {
+          "name": "products_rating_valid",
+          "value": "\"rating\" >= 0 AND \"rating\" <= 5"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.reviews": {
@@ -1027,12 +1050,8 @@
           "name": "reviews_product_id_products_id_fk",
           "tableFrom": "reviews",
           "tableTo": "products",
-          "columnsFrom": [
-            "product_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["product_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1040,20 +1059,27 @@
           "name": "reviews_order_id_orders_id_fk",
           "tableFrom": "reviews",
           "tableTo": "orders",
-          "columnsFrom": [
-            "order_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["order_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "unique_user_product_review": {
+          "name": "unique_user_product_review",
+          "nullsNotDistinct": false,
+          "columns": ["user_id", "product_id"]
+        }
+      },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "reviews_rating_valid": {
+          "name": "reviews_rating_valid",
+          "value": "\"rating\" >= 1 AND \"rating\" <= 5"
+        }
+      },
       "isRLSEnabled": false
     }
   },
