@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import Razorpay from "razorpay";
 
 // Lazy initialization to avoid build-time errors when env vars are not set
@@ -19,6 +20,16 @@ function getRazorpay(): Razorpay | null {
 
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication to create checkout orders
+    const { userId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Please sign in to checkout" },
+        { status: 401 },
+      );
+    }
+
     const { amount, currency = "INR", receipt, notes } = await request.json();
 
     if (!amount || typeof amount !== "number" || amount <= 0) {

@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { SignedIn, SignedOut, RedirectToSignIn, useUser } from "@clerk/nextjs";
+import { SignedIn, SignedOut, RedirectToSignIn } from "@clerk/nextjs";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -28,16 +28,14 @@ interface Order {
 function OrdersContent() {
   const searchParams = useSearchParams();
   const success = searchParams.get("success");
-  const { user } = useUser();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchOrders = async () => {
-      if (!user?.id) return;
-
       try {
-        const response = await fetch(`/api/orders?userId=${user.id}`);
+        // API now uses server-side auth - no need to send userId
+        const response = await fetch("/api/orders");
         if (response.ok) {
           const data = await response.json();
           // Transform from Drizzle camelCase to component's expected format
@@ -61,7 +59,7 @@ function OrdersContent() {
     };
 
     fetchOrders();
-  }, [user]);
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {

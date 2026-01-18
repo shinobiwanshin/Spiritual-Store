@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
+import { auth } from "@clerk/nextjs/server";
 import { db, orders, orderItems, cartItems, payments } from "@/db";
 import { eq } from "drizzle-orm";
 
@@ -32,11 +33,20 @@ function isValidItem(item: unknown): item is OrderItem {
 
 export async function POST(request: NextRequest) {
   try {
+    // Get authenticated user from server-side auth (not client-provided)
+    const { userId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 },
+      );
+    }
+
     const {
       razorpay_order_id,
       razorpay_payment_id,
       razorpay_signature,
-      user_id,
       items,
       subtotal,
       total,
@@ -47,7 +57,6 @@ export async function POST(request: NextRequest) {
       !razorpay_order_id ||
       !razorpay_payment_id ||
       !razorpay_signature ||
-      !user_id ||
       !items ||
       !Array.isArray(items) ||
       items.length === 0 ||
@@ -93,7 +102,7 @@ export async function POST(request: NextRequest) {
     const [order] = await db
       .insert(orders)
       .values({
-        userId: user_id,
+        userId: userId,
         razorpayOrderId: razorpay_order_id,
         razorpayPaymentId: razorpay_payment_id,
         status: "paid",
@@ -134,7 +143,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Clear user's cart
-    await db.delete(cartItems).where(eq(cartItems.userId, user_id));
+    await db.delete(cartItems).where(eq(cartItems.userId, userId));
 
     return NextResponse.json({
       success: true,

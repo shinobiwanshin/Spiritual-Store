@@ -1,19 +1,20 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { db, orders } from "@/db";
 import { eq, desc } from "drizzle-orm";
 
-// Force dynamic rendering since we use request.url
+// Force dynamic rendering since we use auth
 export const dynamic = "force-dynamic";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
+    // Get authenticated user from server-side auth (not client-provided)
+    const { userId } = await auth();
 
     if (!userId) {
       return NextResponse.json(
-        { error: "User ID is required" },
-        { status: 400 },
+        { error: "Authentication required" },
+        { status: 401 },
       );
     }
 
