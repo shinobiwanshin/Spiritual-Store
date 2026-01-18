@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useClerk, SignInButton } from "@clerk/nextjs";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Input } from "@/components/ui/input";
@@ -33,6 +33,7 @@ interface SavedReport {
 export default function RashiPage() {
   const router = useRouter();
   const { isSignedIn } = useAuth();
+  const { openSignIn } = useClerk();
   const [formData, setFormData] = useState({
     name: "",
     date: "",
@@ -125,6 +126,12 @@ export default function RashiPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Require sign-in to generate report
+    if (!isSignedIn) {
+      openSignIn();
+      return;
+    }
 
     if (!formData.date || !formData.time || !formData.location) {
       toast.error("Please fill in all required fields");

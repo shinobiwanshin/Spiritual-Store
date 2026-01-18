@@ -205,6 +205,15 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await auth();
+
+    // Require authentication to generate reports
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Please sign in to generate your Kundali" },
+        { status: 401 },
+      );
+    }
+
     const apiKey = process.env.ASTROLOGY_API;
 
     if (!apiKey) {
