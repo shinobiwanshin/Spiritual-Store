@@ -1,6 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+// import Link from "next/link";
+import { useAuth } from "@clerk/nextjs";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Input } from "@/components/ui/input";
@@ -8,8 +11,201 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+
+interface LocationSuggestion {
+  displayName: string;
+  lat: number;
+  lon: number;
+}
+
+interface SavedReport {
+  id: string;
+  name: string | null;
+  birthDate: string;
+  birthTime: string;
+  birthLocation: string;
+  moonSign: string | null;
+  nakshatra: string | null;
+  rasiChartUrl: string | null;
+  navamsaChartUrl: string | null;
+}
 
 export default function RashiPage() {
+  const router = useRouter();
+  const { isSignedIn } = useAuth();
+  const [formData, setFormData] = useState({
+    name: "",
+    date: "",
+    time: "",
+    location: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [loadingCached, setLoadingCached] = useState(true);
+  const [savedReport, setSavedReport] = useState<SavedReport | null>(null);
+
+  // Location autocomplete state
+  const [locationSuggestions, setLocationSuggestions] = useState<
+    LocationSuggestion[]
+  >([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [searchingLocation, setSearchingLocation] = useState(false);
+
+  // Fetch cached report on mount
+  useEffect(() => {
+    if (isSignedIn) {
+      fetchCachedReport();
+    } else {
+      setLoadingCached(false);
+    }
+  }, [isSignedIn]);
+
+  const fetchCachedReport = async () => {
+    try {
+      const response = await fetch("/api/astrology");
+      const data = await response.json();
+      if (data.report) {
+        setSavedReport(data.report);
+      }
+    } catch (error) {
+      console.error("Failed to fetch cached report:", error);
+    } finally {
+      setLoadingCached(false);
+    }
+  };
+
+  // Debounced location search
+  const searchLocation = useCallback(async (query: string) => {
+    if (query.length < 3) {
+      setLocationSuggestions([]);
+      return;
+    }
+
+    setSearchingLocation(true);
+    try {
+      const response = await fetch(
+        `/api/location-search?q=${encodeURIComponent(query)}`,
+      );
+      const data = await response.json();
+      setLocationSuggestions(data.results || []);
+      setShowSuggestions(true);
+    } catch (error) {
+      console.error("Location search error:", error);
+    } finally {
+      setSearchingLocation(false);
+    }
+  }, []);
+
+  // Debounce location input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (formData.location) {
+        searchLocation(formData.location);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [formData.location, searchLocation]);
+
+  const handleLocationSelect = (suggestion: LocationSuggestion) => {
+    setFormData({ ...formData, location: suggestion.displayName });
+    setShowSuggestions(false);
+    setLocationSuggestions([]);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.date || !formData.time || !formData.location) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const [year, month, date] = formData.date.split("-").map(Number);
+      const [hours, minutes] = formData.time.split(":").map(Number);
+
+      const response = await fetch("/api/astrology", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          location: formData.location,
+          year,
+          month,
+          date,
+          hours,
+          minutes,
+          name: formData.name,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast.error(data.error || "Failed to generate chart");
+        return;
+      }
+
+      toast.success("Kundali generated successfully!");
+
+      // Redirect to report page
+      if (data.reportId) {
+        router.push(`/rashi/report/${data.reportId}`);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const downloadChart = async (chartUrl: string, filename: string) => {
+    try {
+      const response = await fetch(chartUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      toast.success(`${filename} downloaded!`);
+    } catch (error) {
+      console.error("Download error:", error);
+      // Fallback: open in new tab
+      window.open(chartUrl, "_blank");
+    }
+  };
+
+  const getRashiName = (sign: string) => {
+    const rashiNames: Record<string, string> = {
+      Aries: "Mesha (मेष)",
+      Taurus: "Vrishabha (वृषभ)",
+      Gemini: "Mithuna (मिथुन)",
+      Cancer: "Karka (कर्क)",
+      Leo: "Simha (सिंह)",
+      Virgo: "Kanya (कन्या)",
+      Libra: "Tula (तुला)",
+      Scorpio: "Vrishchika (वृश्चिक)",
+      Sagittarius: "Dhanu (धनु)",
+      Capricorn: "Makara (मकर)",
+      Aquarius: "Kumbha (कुंभ)",
+      Pisces: "Meena (मीन)",
+    };
+    return rashiNames[sign] || sign;
+  };
+
+  // Redirect to saved report page
+  const viewSavedReport = () => {
+    if (!savedReport) return;
+    router.push(`/rashi/report/${savedReport.id}`);
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
@@ -45,6 +241,91 @@ export default function RashiPage() {
           </p>
         </div>
       </section>
+
+      {/* Saved Report Banner */}
+      {savedReport && (
+        <section className="py-6 px-6">
+          <div className="max-w-2xl mx-auto">
+            <Card className="border-primary/30 bg-linear-to-r from-primary/10 to-primary/5 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 group cursor-pointer overflow-hidden">
+              <CardContent className="p-6">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                  {/* Left side with icon and info */}
+                  <div className="flex items-center gap-4">
+                    <div className="size-14 bg-primary/20 rounded-full flex items-center justify-center group-hover:bg-primary group-hover:scale-110 transition-all duration-300">
+                      <span className="material-symbols-outlined text-2xl text-primary group-hover:text-white transition-colors">
+                        auto_awesome
+                      </span>
+                    </div>
+                    <div>
+                      <p className="font-serif font-bold text-lg group-hover:text-primary transition-colors">
+                        {savedReport.name
+                          ? `${savedReport.name}'s Report`
+                          : "Your Kundali Report"}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Your Kundali:{" "}
+                        <span className="text-primary font-medium">
+                          {savedReport.moonSign &&
+                            getRashiName(savedReport.moonSign)}
+                        </span>
+                        {savedReport.nakshatra && (
+                          <>
+                            {" "}
+                            •{" "}
+                            <span className="font-medium">
+                              {savedReport.nakshatra}
+                            </span>
+                          </>
+                        )}
+                      </p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">
+                        📍{" "}
+                        {savedReport.birthLocation
+                          .split(",")
+                          .slice(0, 2)
+                          .join(",")}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Right side with buttons */}
+                  <div className="flex items-center gap-2">
+                    {savedReport.rasiChartUrl && (
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          downloadChart(
+                            savedReport.rasiChartUrl!,
+                            "my-kundali.svg",
+                          );
+                        }}
+                        variant="ghost"
+                        size="sm"
+                        className="gap-2 hover:bg-primary/10"
+                      >
+                        <span className="material-symbols-outlined text-sm">
+                          download
+                        </span>
+                        Download
+                      </Button>
+                    )}
+                    <Button
+                      onClick={viewSavedReport}
+                      size="sm"
+                      className="gap-2 shadow-lg shadow-primary/20 group-hover:shadow-primary/30"
+                    >
+                      <span className="material-symbols-outlined text-sm">
+                        visibility
+                      </span>
+                      View Report
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      )}
 
       {/* Benefits Section */}
       <section className="py-12 px-6 bg-muted/50 dark:bg-card/50">
@@ -86,7 +367,7 @@ export default function RashiPage() {
                 </p>
               </div>
 
-              <form className="space-y-5">
+              <form onSubmit={handleSubmit} className="space-y-5">
                 {/* Full Name */}
                 <div className="space-y-2">
                   <Label className="text-sm font-bold text-foreground">
@@ -100,6 +381,10 @@ export default function RashiPage() {
                       className="pl-12 h-14 bg-background border-border/50 rounded-xl text-base"
                       placeholder="Enter your full name"
                       type="text"
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
                     />
                   </div>
                 </div>
@@ -108,7 +393,7 @@ export default function RashiPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-bold text-foreground">
-                      Date of Birth (जन्म तिथि)
+                      Date of Birth (जन्म तिथि) *
                     </Label>
                     <div className="relative">
                       <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -117,12 +402,17 @@ export default function RashiPage() {
                       <Input
                         className="pl-12 h-14 bg-background border-border/50 rounded-xl"
                         type="date"
+                        required
+                        value={formData.date}
+                        onChange={(e) =>
+                          setFormData({ ...formData, date: e.target.value })
+                        }
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-bold text-foreground">
-                      Time of Birth (जन्म समय)
+                      Time of Birth (जन्म समय) *
                     </Label>
                     <div className="relative">
                       <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -131,15 +421,20 @@ export default function RashiPage() {
                       <Input
                         className="pl-12 h-14 bg-background border-border/50 rounded-xl"
                         type="time"
+                        required
+                        value={formData.time}
+                        onChange={(e) =>
+                          setFormData({ ...formData, time: e.target.value })
+                        }
                       />
                     </div>
                   </div>
                 </div>
 
-                {/* Place of Birth */}
-                <div className="space-y-2">
+                {/* Place of Birth with Autocomplete */}
+                <div className="space-y-2 relative">
                   <Label className="text-sm font-bold text-foreground">
-                    Place of Birth (जन्म स्थान)
+                    Place of Birth (जन्म स्थान) *
                   </Label>
                   <div className="relative">
                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -147,18 +442,48 @@ export default function RashiPage() {
                     </span>
                     <Input
                       className="pl-12 pr-12 h-14 bg-background border-border/50 rounded-xl"
-                      placeholder="City, State, Country"
+                      placeholder="Start typing city name..."
                       type="text"
+                      required
+                      value={formData.location}
+                      onChange={(e) =>
+                        setFormData({ ...formData, location: e.target.value })
+                      }
+                      onFocus={() =>
+                        locationSuggestions.length > 0 &&
+                        setShowSuggestions(true)
+                      }
+                      onBlur={() =>
+                        setTimeout(() => setShowSuggestions(false), 200)
+                      }
                     />
-                    <button
-                      type="button"
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-primary hover:text-primary/80 transition-colors"
-                    >
-                      <span className="material-symbols-outlined">
-                        my_location
+                    {searchingLocation && (
+                      <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-primary animate-spin">
+                        progress_activity
                       </span>
-                    </button>
+                    )}
                   </div>
+
+                  {/* Location Suggestions Dropdown */}
+                  {showSuggestions && locationSuggestions.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-background border rounded-xl shadow-lg max-h-60 overflow-auto">
+                      {locationSuggestions.map((suggestion, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          className="w-full px-4 py-3 text-left hover:bg-muted transition-colors text-sm flex items-start gap-3"
+                          onClick={() => handleLocationSelect(suggestion)}
+                        >
+                          <span className="material-symbols-outlined text-primary mt-0.5 text-lg">
+                            location_on
+                          </span>
+                          <span className="line-clamp-2">
+                            {suggestion.displayName}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Info Box */}
@@ -178,17 +503,28 @@ export default function RashiPage() {
                 </div>
 
                 {/* Submit Button */}
-                <Link href="/rashi/report">
-                  <Button
-                    className="w-full h-16 text-lg font-bold rounded-xl shadow-xl shadow-primary/20 gap-3"
-                    size="lg"
-                  >
-                    <span className="material-symbols-outlined">
-                      auto_awesome
-                    </span>
-                    Generate Kundali Report
-                  </Button>
-                </Link>
+                <Button
+                  type="submit"
+                  className="w-full h-16 text-lg font-bold rounded-xl shadow-xl shadow-primary/20 gap-3"
+                  size="lg"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <span className="material-symbols-outlined animate-spin">
+                        progress_activity
+                      </span>
+                      Generating Kundali...
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined">
+                        auto_awesome
+                      </span>
+                      Generate Kundali Report
+                    </>
+                  )}
+                </Button>
               </form>
             </CardContent>
           </Card>

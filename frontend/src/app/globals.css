@@ -127,3 +127,162 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Print Styles - 2 pages with proper colors */
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  html,
+  body {
+    background: white !important;
+    color: #1c1c28 !important;
+    font-size: 10pt !important;
+    line-height: 1.3 !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 1cm;
+  }
+
+  nav,
+  footer,
+  button,
+  .material-symbols-outlined {
+    display: none !important;
+  }
+
+  /* Force white backgrounds */
+  main,
+  div,
+  section,
+  article,
+  header {
+    background-color: white !important;
+  }
+
+  /* Cards */
+  [class*="card"] {
+    background: white !important;
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+    margin-bottom: 0.5rem !important;
+    padding: 0.75rem !important;
+  }
+
+  /* Typography - dark text */
+  h1,
+  h2,
+  h3 {
+    color: #1c1c28 !important;
+  }
+
+  h1 {
+    font-size: 18pt !important;
+    margin-bottom: 0.25rem !important;
+  }
+
+  h2,
+  h3 {
+    font-size: 11pt !important;
+    margin-bottom: 0.25rem !important;
+  }
+
+  p,
+  span {
+    color: #333 !important;
+    font-size: 9pt !important;
+  }
+
+  /* Charts - compact side by side */
+  .grid img {
+    max-width: 200px !important;
+    max-height: 200px !important;
+  }
+
+  .grid {
+    display: flex !important;
+    gap: 0.5rem !important;
+  }
+
+  .grid > [class*="card"] {
+    flex: 1 !important;
+    background: white !important;
+  }
+
+  /* Hide icons */
+  .size-24,
+  .size-12 {
+    display: none !important;
+  }
+
+  /* Table - white with borders */
+  table {
+    width: 100% !important;
+    font-size: 8pt !important;
+    background: white !important;
+  }
+
+  th {
+    background: #f0f0f0 !important;
+    color: #1c1c28 !important;
+    border: 1px solid #ccc !important;
+    padding: 4px !important;
+  }
+
+  td {
+    background: white !important;
+    color: #333 !important;
+    border: 1px solid #ddd !important;
+    padding: 3px 4px !important;
+  }
+
+  /* Colored cards with light backgrounds */
+  [class*="bg-primary"] {
+    background: #fff8f7 !important;
+  }
+
+  [class*="bg-emerald"] {
+    background: #f0fdf4 !important;
+  }
+
+  [class*="bg-amber"] {
+    background: #fffbeb !important;
+  }
+
+  /* Colored text */
+  .text-primary {
+    color: #e85d52 !important;
+  }
+
+  .text-emerald-600 {
+    color: #059669 !important;
+  }
+
+  .text-amber-600 {
+    color: #d97706 !important;
+  }
+
+  /* Compact spacing */
+  .mb-8,
+  .mb-12 {
+    margin-bottom: 0.5rem !important;
+  }
+
+  .gap-6 {
+    gap: 0.5rem !important;
+  }
+
+  .p-6 {
+    padding: 0.75rem !important;
+  }
+
+  /* Badge */
+  [class*="badge"] {
+    background: #f5f5f5 !important;
+    color: #333 !important;
+  }
+}

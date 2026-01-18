@@ -424,6 +424,36 @@ export const wishlistItemsRelations = relations(wishlistItems, ({ one }) => ({
 }));
 
 // ============================================
+// RASHI REPORTS (User birth chart data)
+// ============================================
+export const rashiReports = pgTable(
+  "rashi_reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    name: text("name"),
+    birthDate: text("birth_date").notNull(),
+    birthTime: text("birth_time").notNull(),
+    birthLocation: text("birth_location").notNull(),
+    latitude: decimal("latitude", { precision: 10, scale: 6 }).notNull(),
+    longitude: decimal("longitude", { precision: 10, scale: 6 }).notNull(),
+    timezone: decimal("timezone", { precision: 4, scale: 2 }).notNull(),
+    moonSign: text("moon_sign"),
+    nakshatra: text("nakshatra"),
+    rasiChartUrl: text("rasi_chart_url"),
+    navamsaChartUrl: text("navamsa_chart_url"),
+    planetsData: jsonb("planets_data"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [index("idx_rashi_reports_user").on(table.userId)],
+);
+
+// ============================================
 // TYPE EXPORTS
 // ============================================
 export type Category = typeof categories.$inferSelect;
@@ -436,6 +466,7 @@ export type Payment = typeof payments.$inferSelect;
 export type Review = typeof reviews.$inferSelect;
 export type Coupon = typeof coupons.$inferSelect;
 export type WishlistItem = typeof wishlistItems.$inferSelect;
+export type RashiReport = typeof rashiReports.$inferSelect;
 
 export type NewCategory = typeof categories.$inferInsert;
 export type NewProduct = typeof products.$inferInsert;
@@ -447,3 +478,4 @@ export type NewPayment = typeof payments.$inferInsert;
 export type NewReview = typeof reviews.$inferInsert;
 export type NewCoupon = typeof coupons.$inferInsert;
 export type NewWishlistItem = typeof wishlistItems.$inferInsert;
+export type NewRashiReport = typeof rashiReports.$inferInsert;
