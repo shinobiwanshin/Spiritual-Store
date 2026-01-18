@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const GEOCODING_API = "https://nominatim.openstreetmap.org/search";
+const GEOCODING_API =
+  process.env.GEOCODING_API || "https://nominatim.openstreetmap.org/search";
+const FETCH_TIMEOUT_MS = 5000;
+
+// Cache responses for 1 hour to comply with Nominatim policy
+export const revalidate = 3600;
 
 interface GeocodingResult {
   lat: string;
@@ -18,30 +23,63 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ results: [] });
     }
 
-    const response = await fetch(
-      `${GEOCODING_API}?q=${encodeURIComponent(query)}&format=json&limit=5&addressdetails=1`,
-      {
-        headers: {
-          "User-Agent": "AstraSpiritual/1.0",
+    // Create AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+    let response: Response;
+    try {
+      response = await fetch(
+        `${GEOCODING_API}?q=${encodeURIComponent(query)}&format=json&limit=5&addressdetails=1`,
+        {
+          headers: {
+            "User-Agent": "AstraSpiritual/1.0",
+          },
+          signal: controller.signal,
         },
-      },
-    );
+      );
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if ((fetchError as Error).name === "AbortError") {
+        console.error("Location search timeout for query:", query);
+        return NextResponse.json({ error: "Request timeout" }, { status: 504 });
+      }
+      throw fetchError;
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
+      console.error("Location search API error:", {
+        status: response.status,
+        statusText: response.statusText,
+        query,
+      });
       return NextResponse.json({ results: [] });
     }
 
     const results: GeocodingResult[] = await response.json();
 
-    const formatted = results.map((r) => ({
-      displayName: r.display_name,
-      lat: parseFloat(r.lat),
-      lon: parseFloat(r.lon),
-    }));
+    // Filter and validate coordinates
+    const formatted = results
+      .map((r) => {
+        const lat = parseFloat(r.lat);
+        const lon = parseFloat(r.lon);
+        return { displayName: r.display_name, lat, lon };
+      })
+      .filter((r) => {
+        const validLat = Number.isFinite(r.lat) && r.lat >= -90 && r.lat <= 90;
+        const validLon =
+          Number.isFinite(r.lon) && r.lon >= -180 && r.lon <= 180;
+        return validLat && validLon;
+      });
 
     return NextResponse.json({ results: formatted });
   } catch (error) {
-    console.error("Location search error:", error);
+    console.error(
+      "Location search error:",
+      (error as Error)?.message || "Unknown error",
+    );
     return NextResponse.json({ results: [] });
   }
 }

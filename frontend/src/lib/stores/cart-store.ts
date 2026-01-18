@@ -34,7 +34,11 @@ interface CartState {
 }
 
 // Helper to map server cart item to CartProduct
-function mapServerItemToCartProduct(item: any): CartProduct {
+function mapServerItemToCartProduct(item: any): CartProduct | null {
+  if (!item?.product) {
+    console.error("Invalid cart item: missing product", item?.id);
+    return null;
+  }
   return {
     id: item.product.id,
     title: item.product.title,
@@ -57,9 +61,9 @@ export const useCartStore = create<CartState>()(
         try {
           const response = await axios.get("/api/cart");
           if (response.data && Array.isArray(response.data)) {
-            const cartProducts: CartProduct[] = response.data.map(
-              mapServerItemToCartProduct,
-            );
+            const cartProducts: CartProduct[] = response.data
+              .map(mapServerItemToCartProduct)
+              .filter((item): item is CartProduct => item !== null);
             set({ items: cartProducts, isSynced: true });
           } else {
             set({ items: [], isSynced: true });
@@ -166,7 +170,9 @@ export const useCartStore = create<CartState>()(
         try {
           const response = await axios.get("/api/cart");
           const serverItems: CartProduct[] = Array.isArray(response.data)
-            ? response.data.map(mapServerItemToCartProduct)
+            ? response.data
+                .map(mapServerItemToCartProduct)
+                .filter((item): item is CartProduct => item !== null)
             : [];
 
           // Merge: Server items take priority, then add local items not on server
@@ -185,13 +191,12 @@ export const useCartStore = create<CartState>()(
             ),
           );
 
-          // Add successfully synced items to merged list
+          // Add all items to merged list and track failures
+          let failedCount = 0;
           syncResults.forEach((result, index) => {
-            if (result.status === "fulfilled") {
-              mergedItems.push(localOnlyItems[index]);
-            } else {
-              // Keep failed items in local state (will retry on next sync)
-              mergedItems.push(localOnlyItems[index]);
+            mergedItems.push(localOnlyItems[index]);
+            if (result.status !== "fulfilled") {
+              failedCount++;
               console.error(
                 `Failed to sync item ${localOnlyItems[index].id}`,
                 result.reason,
@@ -201,9 +206,16 @@ export const useCartStore = create<CartState>()(
 
           set({ items: mergedItems, isSynced: true });
 
-          // Notify user if local items were synced
-          if (localOnlyItems.length > 0) {
+          // Notify user based on actual results
+          const successCount = localOnlyItems.length - failedCount;
+          if (successCount > 0 && failedCount === 0) {
             toast.success("Cart synced with your account");
+          } else if (successCount > 0 && failedCount > 0) {
+            toast.warning(
+              `Synced ${successCount} items, ${failedCount} failed`,
+            );
+          } else if (failedCount > 0) {
+            toast.error("Failed to sync cart items");
           }
         } catch (error) {
           console.error("Failed to sync cart on login", error);

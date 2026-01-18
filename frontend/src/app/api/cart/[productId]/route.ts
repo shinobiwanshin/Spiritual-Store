@@ -35,10 +35,16 @@ export async function DELETE(
         and(eq(cartItems.userId, userId), eq(cartItems.productId, productId)),
       )
       .returning({ id: cartItems.id });
+    if (result.length === 0) {
+      return NextResponse.json(
+        { error: "Cart item not found", success: false },
+        { status: 404 },
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      deleted: result.length > 0,
+      deleted: true,
     });
   } catch (error) {
     console.error("Cart Item DELETE Error:", error);

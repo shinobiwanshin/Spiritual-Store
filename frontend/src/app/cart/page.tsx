@@ -64,7 +64,11 @@ export default function CartPage() {
           {/* Cart Content */}
           <div className="max-w-7xl mx-auto px-6 pb-24">
             {isLoading && items.length === 0 ? (
-              <div className="flex justify-center py-20">
+              <div
+                className="flex justify-center py-20"
+                role="status"
+                aria-label="Loading cart items"
+              >
                 <div className="animate-spin">
                   <span className="material-symbols-outlined text-4xl text-primary">
                     progress_activity

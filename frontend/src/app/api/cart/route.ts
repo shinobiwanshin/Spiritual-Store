@@ -134,7 +134,7 @@ export async function PUT(req: NextRequest) {
 
     if (result.length === 0) {
       return NextResponse.json(
-        { success: false, message: "Cart item not found" },
+        { error: "Cart item not found" },
         { status: 404 },
       );
     }

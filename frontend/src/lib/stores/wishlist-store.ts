@@ -65,7 +65,10 @@ export const useWishlistStore = create<WishlistState>()(
         } catch (error) {
           console.error("Failed to fetch wishlist", error);
           toast.error("Failed to load wishlist");
-          set({ items: [] });
+          // Only clear items if this was the initial load (items were already empty)
+          if (get().items.length === 0) {
+            set({ items: [] });
+          }
         } finally {
           set({ isLoading: false });
         }

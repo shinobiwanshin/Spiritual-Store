@@ -3,6 +3,33 @@ import crypto from "crypto";
 import { db, orders, orderItems, cartItems, payments } from "@/db";
 import { eq } from "drizzle-orm";
 
+// Type guard for validating item structure
+interface OrderItem {
+  product_id: string;
+  title: string;
+  price: number;
+  quantity: number;
+  image: string;
+}
+
+function isValidItem(item: unknown): item is OrderItem {
+  if (!item || typeof item !== "object") return false;
+  const obj = item as Record<string, unknown>;
+  return (
+    typeof obj.product_id === "string" &&
+    obj.product_id.length > 0 &&
+    typeof obj.title === "string" &&
+    obj.title.length > 0 &&
+    typeof obj.price === "number" &&
+    Number.isFinite(obj.price) &&
+    obj.price >= 0 &&
+    typeof obj.quantity === "number" &&
+    Number.isInteger(obj.quantity) &&
+    obj.quantity > 0 &&
+    typeof obj.image === "string"
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
     const {
@@ -24,6 +51,7 @@ export async function POST(request: NextRequest) {
       !items ||
       !Array.isArray(items) ||
       items.length === 0 ||
+      !items.every(isValidItem) ||
       typeof subtotal !== "number" ||
       !Number.isFinite(subtotal) ||
       subtotal < 0 ||
@@ -53,6 +81,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Payment verified - create order with items in a transaction-like flow
+    // Transform items to match OrderItemSnapshot format
+    const itemsSnapshot = items.map((item: OrderItem) => ({
+      productId: item.product_id,
+      title: item.title,
+      price: item.price,
+      quantity: item.quantity,
+      image: item.image,
+    }));
+
     const [order] = await db
       .insert(orders)
       .values({
@@ -63,7 +100,7 @@ export async function POST(request: NextRequest) {
         subtotal: subtotal.toString(),
         total: total.toString(),
         shippingAddress: shipping_address,
-        itemsSnapshot: items, // JSON snapshot for display
+        itemsSnapshot: itemsSnapshot, // JSON snapshot for display
       })
       .returning();
 

@@ -30,16 +30,27 @@ export async function POST(request: NextRequest) {
 
     const razorpayInstance = getRazorpay();
 
-    // If Razorpay is not configured, return a mock response for development/demo
+    // If Razorpay is not configured
     if (!razorpayInstance) {
-      console.warn("Razorpay not configured. Returning mock order.");
-      return NextResponse.json({
-        orderId: `mock_order_${Date.now()}`,
-        amount: Math.round(amount * 100),
-        currency,
-        mock: true,
-        message: "Payment gateway not configured. This is a demo order.",
-      });
+      // Only return mock response in development
+      if (process.env.NODE_ENV !== "production") {
+        console.warn(
+          "Razorpay not configured. Returning mock order for development.",
+        );
+        return NextResponse.json({
+          orderId: `mock_order_${Date.now()}`,
+          amount: Math.round(amount * 100),
+          currency,
+          mock: true,
+          message: "Payment gateway not configured. This is a demo order.",
+        });
+      }
+      // In production, return error
+      console.error("Razorpay not configured in production environment");
+      return NextResponse.json(
+        { error: "Payment gateway is not configured. Please contact support." },
+        { status: 500 },
+      );
     }
 
     const options = {

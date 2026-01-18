@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
@@ -14,7 +14,7 @@ interface PlanetData {
   name: string;
   fullDegree: number;
   normDegree: number;
-  isRetro: string;
+  isRetro: boolean;
   sign: string;
   nakshatra: string;
   house: number;
@@ -57,13 +57,7 @@ export default function ReportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (reportId) {
-      fetchReport();
-    }
-  }, [reportId]);
-
-  const fetchReport = async () => {
+  const fetchReport = useCallback(async () => {
     try {
       const response = await fetch(`/api/astrology/report/${reportId}`);
       const data = await response.json();
@@ -75,16 +69,27 @@ export default function ReportPage() {
 
       setReport(data.report);
     } catch (err) {
-      console.error("Error fetching report:", err);
+      console.error("Error fetching report:", (err as Error)?.message);
       setError("Something went wrong");
     } finally {
       setLoading(false);
     }
-  };
+  }, [reportId]);
+
+  useEffect(() => {
+    if (reportId) {
+      fetchReport();
+    }
+  }, [reportId, fetchReport]);
 
   const downloadChart = async (chartUrl: string, filename: string) => {
     try {
       const response = await fetch(chartUrl);
+      if (!response.ok) {
+        toast.error(`Failed to download ${filename}, opening in new tab`);
+        window.open(chartUrl, "_blank");
+        return;
+      }
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -95,7 +100,9 @@ export default function ReportPage() {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
       toast.success(`${filename} downloaded!`);
-    } catch {
+    } catch (err) {
+      console.error("Download error:", (err as Error)?.message);
+      toast.error(`Failed to download ${filename}, opening in new tab`);
       window.open(chartUrl, "_blank");
     }
   };
@@ -112,10 +119,6 @@ export default function ReportPage() {
     } catch {
       toast.error("Failed to copy link");
     }
-  };
-
-  const downloadPDF = () => {
-    window.print();
   };
 
   if (loading) {
@@ -383,7 +386,7 @@ export default function ReportPage() {
                           {planet.normDegree?.toFixed(2)}°
                         </td>
                         <td className="py-3 px-2">
-                          {planet.isRetro === "true" && (
+                          {planet.isRetro && (
                             <Badge
                               variant="outline"
                               className="text-orange-500 border-orange-500"

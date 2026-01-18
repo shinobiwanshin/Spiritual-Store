@@ -81,7 +81,7 @@ function OrdersContent() {
   return (
     <div className="max-w-4xl mx-auto px-6 pt-24 pb-12">
       {/* Success Message */}
-      {success && (
+      {success === "true" && (
         <Card className="mb-8 border-green-500/50 bg-green-50 dark:bg-green-900/20">
           <CardContent className="p-6 flex items-center gap-4">
             <div className="size-12 bg-green-500 rounded-full flex items-center justify-center">
@@ -136,8 +136,8 @@ function OrdersContent() {
                 </div>
 
                 <div className="space-y-3">
-                  {order.items.map((item, idx) => (
-                    <div key={idx} className="flex gap-4">
+                  {order.items.map((item) => (
+                    <div key={item.product_id} className="flex gap-4">
                       <div
                         className="w-16 h-16 rounded-lg bg-cover bg-center shrink-0"
                         style={{

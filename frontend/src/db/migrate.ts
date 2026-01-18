@@ -18,6 +18,8 @@ if (envResult.error) {
       console.log("📄 Loaded environment from .env (fallback)");
     }
   }
+} else {
+  console.log("📄 Loaded environment from .env.local");
 }
 
 const runMigrate = async () => {

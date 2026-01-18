@@ -3,22 +3,6 @@ import { db } from "@/db";
 import { rashiReports } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
-// Sign number to name mapping
-const SIGN_NAMES: Record<number, string> = {
-  1: "Aries",
-  2: "Taurus",
-  3: "Gemini",
-  4: "Cancer",
-  5: "Leo",
-  6: "Virgo",
-  7: "Libra",
-  8: "Scorpio",
-  9: "Sagittarius",
-  10: "Capricorn",
-  11: "Aquarius",
-  12: "Pisces",
-};
-
 // Hindi names for signs
 const RASHI_NAMES: Record<string, string> = {
   Aries: "Mesha (मेष)",
@@ -109,6 +93,10 @@ const RUDRAKSHA_RECOMMENDATIONS: Record<
   Pisces: { mukhi: "5 Mukhi", benefits: "Peace, health, and spirituality" },
 };
 
+// UUID validation regex
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // GET report by ID
 export async function GET(
   request: NextRequest,
@@ -117,9 +105,10 @@ export async function GET(
   try {
     const { id } = await params;
 
-    if (!id) {
+    // Validate UUID format
+    if (!UUID_REGEX.test(id)) {
       return NextResponse.json(
-        { error: "Report ID is required" },
+        { error: "Invalid report ID format" },
         { status: 400 },
       );
     }
@@ -135,7 +124,7 @@ export async function GET(
     }
 
     const report = reports[0];
-    const moonSign = report.moonSign || "Aries";
+    const moonSign = report.moonSign ?? null;
 
     // Build comprehensive report
     const fullReport = {
@@ -153,7 +142,7 @@ export async function GET(
       },
       kundali: {
         moonSign: moonSign,
-        moonSignHindi: RASHI_NAMES[moonSign] || moonSign,
+        moonSignHindi: moonSign ? RASHI_NAMES[moonSign] || moonSign : null,
         nakshatra: report.nakshatra,
         charts: {
           rasi: report.rasiChartUrl,
@@ -162,15 +151,21 @@ export async function GET(
         planets: report.planetsData,
       },
       recommendations: {
-        gemstone: GEMSTONE_RECOMMENDATIONS[moonSign] || null,
-        rudraksha: RUDRAKSHA_RECOMMENDATIONS[moonSign] || null,
+        gemstone: moonSign ? GEMSTONE_RECOMMENDATIONS[moonSign] || null : null,
+        rudraksha: moonSign
+          ? RUDRAKSHA_RECOMMENDATIONS[moonSign] || null
+          : null,
       },
+      incompleteData: !moonSign,
       createdAt: report.createdAt,
     };
 
     return NextResponse.json({ report: fullReport });
   } catch (error) {
-    console.error("GET report error:", error);
+    console.error(
+      "GET report error:",
+      (error as Error)?.message || "Unknown error",
+    );
     return NextResponse.json(
       { error: "Failed to fetch report" },
       { status: 500 },

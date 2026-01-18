@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-// import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -63,14 +62,19 @@ export default function RashiPage() {
   const fetchCachedReport = async () => {
     try {
       const response = await fetch("/api/astrology");
+      if (!response.ok) {
+        console.error("Failed to fetch cached report:", response.status);
+        return;
+      }
       const data = await response.json();
       if (data.report) {
         setSavedReport(data.report);
       }
     } catch (error) {
-      console.error("Failed to fetch cached report:", error);
-    } finally {
-      setLoadingCached(false);
+      console.error(
+        "Failed to fetch cached report:",
+        (error as Error)?.message,
+      );
     }
   };
 
@@ -86,11 +90,17 @@ export default function RashiPage() {
       const response = await fetch(
         `/api/location-search?q=${encodeURIComponent(query)}`,
       );
+      if (!response.ok) {
+        console.error("Location search failed:", response.status);
+        setLocationSuggestions([]);
+        setShowSuggestions(false);
+        return;
+      }
       const data = await response.json();
       setLocationSuggestions(data.results || []);
       setShowSuggestions(true);
     } catch (error) {
-      console.error("Location search error:", error);
+      console.error("Location search error:", (error as Error)?.message);
     } finally {
       setSearchingLocation(false);
     }
@@ -467,9 +477,9 @@ export default function RashiPage() {
                   {/* Location Suggestions Dropdown */}
                   {showSuggestions && locationSuggestions.length > 0 && (
                     <div className="absolute z-50 w-full mt-1 bg-background border rounded-xl shadow-lg max-h-60 overflow-auto">
-                      {locationSuggestions.map((suggestion, idx) => (
+                      {locationSuggestions.map((suggestion) => (
                         <button
-                          key={idx}
+                          key={`${suggestion.lat}-${suggestion.lon}`}
                           type="button"
                           className="w-full px-4 py-3 text-left hover:bg-muted transition-colors text-sm flex items-start gap-3"
                           onClick={() => handleLocationSelect(suggestion)}

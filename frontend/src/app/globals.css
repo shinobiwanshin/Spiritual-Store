@@ -150,17 +150,17 @@
 
   nav,
   footer,
-  button,
+  .no-print,
   .material-symbols-outlined {
     display: none !important;
   }
 
   /* Force white backgrounds */
   main,
-  div,
   section,
   article,
-  header {
+  header,
+  .print-white-bg {
     background-color: white !important;
   }
 
@@ -191,31 +191,33 @@
     margin-bottom: 0.25rem !important;
   }
 
-  p,
-  span {
+  p {
     color: #333 !important;
     font-size: 9pt !important;
   }
 
+  span:not([class]) {
+    color: #333;
+  }
+
   /* Charts - compact side by side */
-  .grid img {
+  .print-chart-grid img {
     max-width: 200px !important;
     max-height: 200px !important;
   }
 
-  .grid {
+  .print-chart-grid {
     display: flex !important;
     gap: 0.5rem !important;
   }
 
-  .grid > [class*="card"] {
+  .print-chart-grid > [class*="card"] {
     flex: 1 !important;
     background: white !important;
   }
 
-  /* Hide icons */
-  .size-24,
-  .size-12 {
+  /* Hide avatar icons in print */
+  .print-hide-icon {
     display: none !important;
   }
 
