@@ -4,8 +4,8 @@ const GEOCODING_API =
   process.env.GEOCODING_API || "https://nominatim.openstreetmap.org/search";
 const FETCH_TIMEOUT_MS = 5000;
 
-// Cache responses for 1 hour to comply with Nominatim policy
-export const revalidate = 3600;
+// Force dynamic rendering since we use request.url
+export const dynamic = "force-dynamic";
 
 interface GeocodingResult {
   lat: string;
