@@ -20,7 +20,16 @@ interface Service {
   price: string;
   benefits: string[];
   howToWear: { icon?: string; color?: string };
+  isPremium?: boolean; // Added for premium filtering
 }
+
+// Defensive price formatter
+export const formatPrice = (price: string): string => {
+  const parsed = parseFloat(price);
+  if (isNaN(parsed)) return "N/A";
+  if (parsed === 0) return "FREE";
+  return `₹${parsed.toLocaleString()}`;
+};
 
 export default function ServiceDetailPage() {
   const params = useParams();
@@ -30,49 +39,111 @@ export default function ServiceDetailPage() {
   const addItem = useCartStore((state) => state.addItem);
   const [service, setService] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [relatedServices, setRelatedServices] = useState<Service[]>([]);
+  const [premiumServices, setPremiumServices] = useState<Service[]>([]);
 
   useEffect(() => {
+    const controller = new AbortController();
     const fetchService = async () => {
       try {
-        // Fetch all services and find by slug
-        const res = await fetch("/api/products?type=service&limit=20");
+        setLoading(true);
+        setError(null);
+
+        // Fetch target service directly
+        const res = await fetch(`/api/products?type=service`, {
+          signal: controller.signal,
+        });
+
         if (res.ok) {
           const data = await res.json();
-          const services = data.products || [];
-          const found = services.find((s: Service) => s.slug === slug);
-          setService(found || null);
-          // Related services (exclude current)
+          const services: Service[] = data.products || [];
+
+          const found = services.find((s) => s.slug === slug);
+
+          if (!found) {
+            setError("Service Not Found");
+            setService(null);
+          } else {
+            setService(found);
+          }
+
+          // Filter related and premium services
           setRelatedServices(
-            services.filter((s: Service) => s.slug !== slug).slice(0, 4),
+            services
+              .filter(
+                (s) =>
+                  s.slug !== slug &&
+                  !["sampurna-kundali", "monthly-kundali"].includes(s.slug),
+              )
+              .slice(0, 4),
           );
+          setPremiumServices(
+            services.filter((s) => ["sampurna-kundali"].includes(s.slug)),
+          );
+        } else {
+          setError("Failed to load services");
         }
-      } catch (error) {
-        console.error("Failed to fetch service", error);
+      } catch (error: any) {
+        if (error.name !== "AbortError") {
+          console.error("Failed to fetch service", error);
+          setError("An error occurred");
+        }
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
     fetchService();
+    return () => controller.abort();
   }, [slug]);
 
-  const handleAddToCart = useCallback(() => {
-    if (!service) return;
+  const handleAddToCart = useCallback(
+    (targetService: Service) => {
+      if (!targetService) return;
 
-    if (!isSignedIn) {
-      openSignIn();
-      return;
+      if (!isSignedIn) {
+        // Save intent and redirect
+        const pendingItem = {
+          id: targetService.id,
+          title: targetService.title,
+          price: targetService.price,
+          image: targetService.howToWear?.icon || "auto_awesome",
+        };
+        sessionStorage.setItem("pendingCartItem", JSON.stringify(pendingItem));
+        openSignIn({ afterSignInUrl: window.location.href });
+        return;
+      }
+
+      addItem({
+        id: targetService.id,
+        title: targetService.title,
+        price: targetService.price,
+        image: targetService.howToWear?.icon || "auto_awesome",
+      });
+
+      toast.success(`${targetService.title} added to cart!`);
+    },
+    [isSignedIn, openSignIn, addItem],
+  );
+
+  // Check for pending cart item on mount
+  useEffect(() => {
+    if (isSignedIn) {
+      const pending = sessionStorage.getItem("pendingCartItem");
+      if (pending) {
+        try {
+          const item = JSON.parse(pending);
+          addItem(item);
+          sessionStorage.removeItem("pendingCartItem");
+          toast.success(`${item.title} added to cart!`);
+        } catch (e) {
+          console.error("Failed to parse pending item", e);
+        }
+      }
     }
-
-    addItem({
-      id: service.id,
-      title: service.title,
-      price: service.price,
-      image: "",
-    });
-
-    toast.success(`${service.title} added to cart!`);
-  }, [service, isSignedIn, openSignIn, addItem]);
+  }, [isSignedIn, addItem]);
 
   if (loading) {
     return (
@@ -182,7 +253,7 @@ export default function ServiceDetailPage() {
                   ) : (
                     <>
                       <span className="text-5xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-orange-500 to-primary">
-                        ₹{parseFloat(service.price).toLocaleString()}
+                        {formatPrice(service.price)}
                       </span>
                       <span className="text-lg text-muted-foreground">
                         one-time
@@ -193,26 +264,42 @@ export default function ServiceDetailPage() {
                 <div className="flex flex-col gap-4 max-w-md mx-auto lg:mx-0 lg:max-w-none lg:flex-row">
                   <Button
                     className="w-full h-14 md:h-16 px-8 text-lg font-semibold rounded-2xl gap-3 bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 shadow-lg shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 hover:scale-[1.02] active:scale-95 transition-all duration-300"
-                    onClick={handleAddToCart}
+                    onClick={() => {
+                      if (
+                        slug === "sampurna-kundali" ||
+                        slug === "monthly-kundali"
+                      ) {
+                        handleAddToCart(service);
+                      } else {
+                        document
+                          .getElementById("premium-plans")
+                          ?.scrollIntoView({ behavior: "smooth" });
+                      }
+                    }}
                   >
                     <span className="material-symbols-outlined text-2xl">
                       add_shopping_cart
                     </span>
-                    Book Now
+                    Book Consultation
                   </Button>
-                  <button
-                    onClick={() => {
-                      document
-                        .getElementById("premium-plans")
-                        ?.scrollIntoView({ behavior: "smooth" });
-                    }}
-                    className="w-full h-14 md:h-16 px-8 text-lg rounded-2xl border-2 border-primary/30 bg-card/50 backdrop-blur-sm hover:bg-primary/10 flex items-center justify-center gap-3 font-medium transition-all duration-300 hover:border-primary/50"
-                  >
-                    <span className="material-symbols-outlined text-primary">
-                      workspace_premium
-                    </span>
-                    Premium Plans
-                  </button>
+
+                  {/* Show Premium Plans button only if not on a premium page */}
+                  {slug !== "sampurna-kundali" &&
+                    slug !== "monthly-kundali" && (
+                      <button
+                        onClick={() => {
+                          document
+                            .getElementById("premium-plans")
+                            ?.scrollIntoView({ behavior: "smooth" });
+                        }}
+                        className="w-full h-14 md:h-16 px-8 text-lg rounded-2xl border-2 border-primary/30 bg-card/50 backdrop-blur-sm hover:bg-primary/10 flex items-center justify-center gap-3 font-medium transition-all duration-300 hover:border-primary/50"
+                      >
+                        <span className="material-symbols-outlined text-primary">
+                          workspace_premium
+                        </span>
+                        Sampurna Kundali
+                      </button>
+                    )}
                 </div>
               </div>
             </div>
@@ -322,146 +409,106 @@ export default function ServiceDetailPage() {
       </section>
 
       {/* Premium Plans Section - Hide for premium services themselves */}
+      {/* Premium Plans Section */}
+      {/* Consultation Options Section */}
       {slug !== "sampurna-kundali" && slug !== "monthly-kundali" && (
         <section id="premium-plans" className="py-16 px-6">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
               <Badge className="bg-primary/10 text-primary border-primary/20 mb-4">
-                Premium Services
+                Consultation Options
               </Badge>
               <h2 className="text-3xl font-serif font-bold">
-                Upgrade Your Experience
+                Choose The Best Plan For You
               </h2>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
-              {/* Sampurna Kundali Banner */}
-              <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-primary/10 via-orange-500/10 to-primary/10 border border-primary/20 p-8 hover:shadow-2xl transition-all group">
-                <div className="absolute top-4 right-4">
-                  <Badge className="bg-orange-500 text-white border-0">
-                    Best Value
-                  </Badge>
-                </div>
-                <div className="flex flex-col h-full">
-                  <div className="size-16 rounded-2xl bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center shadow-lg mb-6">
-                    <span className="material-symbols-outlined text-white text-3xl">
-                      call
-                    </span>
-                  </div>
-                  <h3 className="text-2xl font-serif font-bold mb-3">
-                    Sampurna Kundali
-                  </h3>
-                  <p className="text-muted-foreground mb-4 flex-1">
-                    Complete personalized consultation with unlimited call time.
-                    Free follow-up call included if you have any doubts!
-                  </p>
-                  <ul className="space-y-2 mb-6">
-                    <li className="flex items-center gap-2 text-sm">
-                      <span className="material-symbols-outlined text-primary text-lg">
-                        check_circle
-                      </span>
-                      Unlimited call time
-                    </li>
-                    <li className="flex items-center gap-2 text-sm">
-                      <span className="material-symbols-outlined text-primary text-lg">
-                        check_circle
-                      </span>
-                      Free follow-up call
-                    </li>
-                    <li className="flex items-center gap-2 text-sm">
-                      <span className="material-symbols-outlined text-primary text-lg">
-                        check_circle
-                      </span>
-                      All life areas covered
-                    </li>
-                  </ul>
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-4 mt-auto">
-                    <div className="text-center sm:text-left">
-                      <span className="text-3xl font-bold text-primary">
-                        ₹2,999
-                      </span>
-                      <span className="text-sm text-muted-foreground line-through ml-2">
-                        ₹4,999
-                      </span>
-                    </div>
-                    <Link
-                      href="/services/sampurna-kundali"
-                      className="w-full sm:w-auto"
-                    >
-                      <Button className="w-full sm:w-auto rounded-full gap-2 bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 shadow-lg hover:shadow-primary/25">
-                        <span className="material-symbols-outlined">
-                          arrow_forward
+              {[service!, ...premiumServices]
+                .filter(
+                  (s, i, a) => a.findIndex((x) => x.slug === s.slug) === i,
+                )
+                .map((plan) => (
+                  <div
+                    key={plan.id}
+                    className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-primary/10 via-orange-500/10 to-primary/10 border border-primary/20 p-8 hover:shadow-2xl transition-all group"
+                  >
+                    {plan.slug === "sampurna-kundali" && (
+                      <div className="absolute top-4 right-4">
+                        <Badge className="bg-orange-500 text-white border-0">
+                          Best Value
+                        </Badge>
+                      </div>
+                    )}
+                    <div className="flex flex-col h-full">
+                      <div className="size-16 rounded-2xl bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center shadow-lg mb-6">
+                        <span className="material-symbols-outlined text-white text-3xl">
+                          {plan.howToWear?.icon || "workspace_premium"}
                         </span>
-                        Learn More
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-              </div>
+                      </div>
+                      <h3 className="text-2xl font-serif font-bold mb-3">
+                        {plan.title}
+                      </h3>
 
-              {/* Monthly Kundali Banner */}
-              <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-purple-500/10 via-violet-500/10 to-purple-500/10 border border-purple-500/20 p-8 hover:shadow-2xl transition-all group">
-                <div className="absolute top-4 right-4">
-                  <Badge className="bg-purple-500 text-white border-0">
-                    Subscription
-                  </Badge>
-                </div>
-                <div className="flex flex-col h-full">
-                  <div className="size-16 rounded-2xl bg-gradient-to-br from-purple-500 to-violet-500 flex items-center justify-center shadow-lg mb-6">
-                    <span className="material-symbols-outlined text-white text-3xl">
-                      calendar_month
-                    </span>
-                  </div>
-                  <h3 className="text-2xl font-serif font-bold mb-3">
-                    Monthly Kundali
-                  </h3>
-                  <p className="text-muted-foreground mb-4 flex-1">
-                    Monthly Kundali chart based on Telugu calendar with 3 free
-                    consultation calls per year included!
-                  </p>
-                  <ul className="space-y-2 mb-6">
-                    <li className="flex items-center gap-2 text-sm">
-                      <span className="material-symbols-outlined text-purple-500 text-lg">
-                        check_circle
-                      </span>
-                      Monthly chart delivery
-                    </li>
-                    <li className="flex items-center gap-2 text-sm">
-                      <span className="material-symbols-outlined text-purple-500 text-lg">
-                        check_circle
-                      </span>
-                      3 free calls/year
-                    </li>
-                    <li className="flex items-center gap-2 text-sm">
-                      <span className="material-symbols-outlined text-purple-500 text-lg">
-                        check_circle
-                      </span>
-                      Email delivery
-                    </li>
-                  </ul>
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-4 mt-auto">
-                    <div className="text-center sm:text-left">
-                      <span className="text-3xl font-bold text-purple-500">
-                        ₹6,999
-                      </span>
-                      <span className="text-sm text-muted-foreground ml-2">
-                        /year
-                      </span>
+                      {/* Description removed as requested */}
+
+                      <div className="mb-6 flex-1">
+                        {plan.benefits && (
+                          <ul className="space-y-3">
+                            {plan.benefits.map((b, i) => (
+                              <li
+                                key={i}
+                                className="flex items-start gap-3 text-sm"
+                              >
+                                <span className="material-symbols-outlined text-primary text-lg shrink-0 mt-0.5">
+                                  check_circle
+                                </span>
+                                <span className="text-muted-foreground">
+                                  {b}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-6 mt-auto border-t border-primary/10">
+                        <div className="text-center sm:text-left">
+                          <span className="text-3xl font-bold text-primary">
+                            {formatPrice(plan.price)}
+                          </span>
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                          {plan.slug === "sampurna-kundali" && (
+                            <Link
+                              href={`/services/${plan.slug}`}
+                              className="w-full sm:w-auto"
+                            >
+                              <Button
+                                variant="outline"
+                                className="w-full sm:w-auto rounded-full gap-2 border-primary/20 hover:bg-primary/5"
+                              >
+                                <span className="material-symbols-outlined">
+                                  arrow_forward
+                                </span>
+                                Learn More
+                              </Button>
+                            </Link>
+                          )}
+                          <Button
+                            onClick={() => handleAddToCart(plan)}
+                            className="w-full sm:w-auto rounded-full gap-2 bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 shadow-lg hover:shadow-primary/25"
+                          >
+                            <span className="material-symbols-outlined">
+                              add_shopping_cart
+                            </span>
+                            Book Consultation
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                    <Link
-                      href="/services/monthly-kundali"
-                      className="w-full sm:w-auto"
-                    >
-                      <Button className="w-full sm:w-auto rounded-full gap-2 bg-gradient-to-r from-purple-500 to-violet-500 hover:from-purple-600 hover:to-violet-600 shadow-lg hover:shadow-purple-500/25">
-                        <span className="material-symbols-outlined">
-                          arrow_forward
-                        </span>
-                        Learn More
-                      </Button>
-                    </Link>
                   </div>
-                </div>
-              </div>
+                ))}
             </div>
           </div>
         </section>
@@ -490,7 +537,7 @@ export default function ServiceDetailPage() {
                         {s.title}
                       </h3>
                       <span className="text-primary font-bold text-sm md:text-base">
-                        ₹{parseFloat(s.price).toLocaleString()}
+                        {formatPrice(s.price)}
                       </span>
                     </CardContent>
                   </Card>

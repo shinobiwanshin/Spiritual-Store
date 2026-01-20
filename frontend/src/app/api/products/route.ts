@@ -40,6 +40,9 @@ export async function GET(request: NextRequest) {
       conditions.push(sql`${products.id} != ${exclude}`);
     }
 
+    // Remove Legal Problems Consultation completely
+    conditions.push(sql`${products.slug} != 'legal-problems-consultation'`);
+
     if (zodiac) {
       // Create Postgres array literal string '{A,B,C}'
       const zodiacs = zodiac
