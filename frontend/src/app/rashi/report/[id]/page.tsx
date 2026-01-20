@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import DOMPurify from "dompurify";
 
 interface PlanetData {
   name: string;
@@ -51,19 +52,41 @@ interface FullReport {
 }
 
 const ChartRenderer = ({ data, alt }: { data: string; alt: string }) => {
-  console.log("Chart Data for", alt, ":", data?.substring(0, 100)); // Debug log
+  const [imgError, setImgError] = useState(false);
 
   if (!data) return <div className="p-4 text-red-500">No Data</div>;
 
-  if (typeof data === "string" && data.trim().startsWith("<svg")) {
+  if (data.trim().startsWith("<svg")) {
+    const sanitized = DOMPurify.sanitize(data, {
+      USE_PROFILES: { svg: true },
+    });
     return (
       <div
         className="w-full max-w-sm [&>svg]:w-full [&>svg]:h-auto"
-        dangerouslySetInnerHTML={{ __html: data }}
+        dangerouslySetInnerHTML={{ __html: sanitized }}
       />
     );
   }
-  return <img src={data} alt={alt} className="w-full max-w-sm" />;
+
+  if (imgError) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 bg-muted/20 rounded-xl border border-dashed border-muted-foreground/30 w-full max-w-sm h-64 text-center">
+        <span className="material-symbols-outlined text-4xl text-muted-foreground mb-2">
+          broken_image
+        </span>
+        <p className="text-sm text-muted-foreground">Chart unavailable</p>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={data}
+      alt={alt}
+      className="w-full max-w-sm"
+      onError={() => setImgError(true)}
+    />
+  );
 };
 
 export default function ReportPage() {

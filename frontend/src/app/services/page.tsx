@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useAuth, useClerk } from "@clerk/nextjs";
 import Navbar from "@/components/Navbar";
@@ -399,84 +399,6 @@ export default function ServicesPage() {
         </div>
       </section>
 
-      {/* Monthly Kundali - Subscription Section */}
-      <section className="py-16 px-6 bg-gradient-to-br from-purple-500/5 via-background to-violet-500/5">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <Badge className="bg-purple-500/10 text-purple-500 border-purple-500/20 mb-4">
-                Subscription
-              </Badge>
-              <h2 className="text-3xl md:text-4xl font-serif font-bold mb-6">
-                Monthly Kundali
-              </h2>
-              <p className="text-muted-foreground mb-6">
-                Stay aligned with the cosmos every month! Receive your
-                personalized Kundali chart based on the Telugu calendar
-                delivered monthly. Plus, get 3 free consultation calls per year
-                with our expert astrologers.
-              </p>
-              <ul className="space-y-3 mb-8">
-                {[
-                  "Monthly Kundali chart (Telugu calendar)",
-                  "Personalized monthly predictions",
-                  "Auspicious dates & timings",
-                  "3 free consultation calls/year",
-                  "Email delivery",
-                  "Cancel anytime",
-                ].map((item) => (
-                  <li key={item} className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-purple-500 text-lg">
-                      check_circle
-                    </span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <Button
-                  className="w-full sm:w-auto h-14 px-8 text-lg font-semibold rounded-full gap-3 bg-gradient-to-r from-purple-500 to-violet-500 hover:from-purple-600 hover:to-violet-600 shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all duration-200"
-                  onClick={() =>
-                    handleAddToCart({
-                      id: "monthly-kundali",
-                      title: "Monthly Kundali Subscription",
-                      slug: "monthly-kundali",
-                      description:
-                        "Monthly Kundali chart based on Telugu calendar",
-                      price: "6999",
-                      benefits: [],
-                      howToWear: {},
-                    })
-                  }
-                >
-                  <span className="material-symbols-outlined text-2xl">
-                    calendar_month
-                  </span>
-                  Subscribe for ₹6,999/year
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  3 free calls included
-                </span>
-              </div>
-            </div>
-            <div className="relative">
-              <div className="aspect-square rounded-3xl bg-gradient-to-br from-purple-500/20 via-violet-500/20 to-purple-500/20 flex items-center justify-center">
-                <div className="text-center">
-                  <span className="material-symbols-outlined text-8xl text-purple-500 mb-4">
-                    calendar_month
-                  </span>
-                  <p className="text-xl font-serif font-bold">
-                    Monthly Updates
-                  </p>
-                </div>
-              </div>
-              <div className="absolute -bottom-4 -right-4 bg-purple-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
-                ₹6,999/year
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* How It Works */}
       <section className="py-16 px-6 bg-muted/30">

@@ -457,6 +457,35 @@ export const rashiReports = pgTable(
 );
 
 // ============================================
+// USERS
+// ============================================
+export const users = pgTable("users", {
+  id: text("id").primaryKey(), // Clerk ID
+  email: text("email").notNull().unique(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  imageUrl: text("image_url"),
+  role: text("role", { enum: ["user", "admin"] })
+    .default("user")
+    .notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export const usersRelations = relations(users, ({ many }) => ({
+  cartItems: many(cartItems),
+  orders: many(orders),
+  addresses: many(addresses),
+  reviews: many(reviews),
+  wishlistItems: many(wishlistItems),
+  rashiReports: many(rashiReports),
+}));
+
+// ============================================
 // TYPE EXPORTS
 // ============================================
 export type Category = typeof categories.$inferSelect;
@@ -470,6 +499,7 @@ export type Review = typeof reviews.$inferSelect;
 export type Coupon = typeof coupons.$inferSelect;
 export type WishlistItem = typeof wishlistItems.$inferSelect;
 export type RashiReport = typeof rashiReports.$inferSelect;
+export type User = typeof users.$inferSelect;
 
 export type NewCategory = typeof categories.$inferInsert;
 export type NewProduct = typeof products.$inferInsert;
@@ -482,3 +512,4 @@ export type NewReview = typeof reviews.$inferInsert;
 export type NewCoupon = typeof coupons.$inferInsert;
 export type NewWishlistItem = typeof wishlistItems.$inferInsert;
 export type NewRashiReport = typeof rashiReports.$inferInsert;
+export type NewUser = typeof users.$inferInsert;
