@@ -126,7 +126,7 @@ export default function Navbar() {
           {/* Center Navigation - Desktop */}
           {/* Note: Hidden on mobile/tablet (< lg), visible on large screens */}
           {/* Using text-sm and tighter spacing to fit 7 items */}
-          <div className="hidden xl:flex items-center gap-1 bg-muted/50 rounded-full px-2 py-1.5 overflow-x-auto">
+          <div className="hidden lg:flex items-center gap-1 bg-muted/50 rounded-full px-2 py-1.5">
             {menuItems.map((item, idx) => {
               if (item.type === "dropdown") {
                 const isActive = activeDropdown === item.label;
@@ -256,7 +256,7 @@ export default function Navbar() {
               variant="ghost"
               size="icon"
               aria-label="Open Menu"
-              className="xl:hidden rounded-full hover:bg-primary/10"
+              className="lg:hidden rounded-full hover:bg-primary/10"
               onClick={() => setMobileMenuOpen(true)}
             >
               <span className="material-symbols-outlined">menu</span>
@@ -267,7 +267,7 @@ export default function Navbar() {
 
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-60 xl:hidden">
+        <div className="fixed inset-0 z-60 lg:hidden">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"

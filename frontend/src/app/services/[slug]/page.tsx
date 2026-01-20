@@ -263,7 +263,7 @@ export default function ServiceDetailPage() {
                 </div>
                 <div className="flex flex-col gap-4 max-w-md mx-auto lg:mx-0 lg:max-w-none lg:flex-row">
                   <Button
-                    className="w-full h-14 md:h-16 px-8 text-lg font-semibold rounded-2xl gap-3 bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 shadow-lg shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 hover:scale-[1.02] active:scale-95 transition-all duration-300"
+                    className="w-full lg:w-auto h-14 md:h-16 px-8 text-lg font-semibold rounded-2xl gap-3 bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 shadow-lg shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 hover:scale-[1.02] active:scale-95 transition-all duration-300"
                     onClick={() => {
                       if (
                         slug === "sampurna-kundali" ||
@@ -292,7 +292,7 @@ export default function ServiceDetailPage() {
                             .getElementById("premium-plans")
                             ?.scrollIntoView({ behavior: "smooth" });
                         }}
-                        className="w-full h-14 md:h-16 px-8 text-lg rounded-2xl border-2 border-primary/30 bg-card/50 backdrop-blur-sm hover:bg-primary/10 flex items-center justify-center gap-3 font-medium transition-all duration-300 hover:border-primary/50"
+                        className="w-full lg:w-auto h-14 md:h-16 px-8 text-lg rounded-2xl border-2 border-primary/30 bg-card/50 backdrop-blur-sm hover:bg-primary/10 flex items-center justify-center gap-3 font-medium transition-all duration-300 hover:border-primary/50"
                       >
                         <span className="material-symbols-outlined text-primary">
                           workspace_premium
@@ -478,7 +478,7 @@ export default function ServiceDetailPage() {
                             {formatPrice(plan.price)}
                           </span>
                         </div>
-                        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                        <div className="flex flex-wrap justify-end gap-2 w-full sm:w-auto">
                           {plan.slug === "sampurna-kundali" && (
                             <Link
                               href={`/services/${plan.slug}`}
@@ -486,9 +486,9 @@ export default function ServiceDetailPage() {
                             >
                               <Button
                                 variant="outline"
-                                className="w-full sm:w-auto rounded-full gap-2 border-primary/20 hover:bg-primary/5"
+                                className="w-full sm:w-auto h-12 px-6 rounded-full gap-2 border-primary/20 hover:bg-primary/5 text-base font-medium"
                               >
-                                <span className="material-symbols-outlined">
+                                <span className="material-symbols-outlined text-xl">
                                   arrow_forward
                                 </span>
                                 Learn More
@@ -497,9 +497,9 @@ export default function ServiceDetailPage() {
                           )}
                           <Button
                             onClick={() => handleAddToCart(plan)}
-                            className="w-full sm:w-auto rounded-full gap-2 bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 shadow-lg hover:shadow-primary/25"
+                            className="w-full sm:w-auto h-12 px-8 rounded-full gap-2 bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 shadow-lg hover:shadow-primary/25 text-base font-semibold"
                           >
-                            <span className="material-symbols-outlined">
+                            <span className="material-symbols-outlined text-xl">
                               add_shopping_cart
                             </span>
                             Book Consultation
