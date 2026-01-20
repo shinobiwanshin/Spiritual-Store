@@ -53,6 +53,8 @@ export const products = pgTable(
     howToWear: jsonb("how_to_wear").default({}),
     zodiacCompatibility: text("zodiac_compatibility").array().default([]),
     stock: integer("stock").default(0).notNull(),
+    // Type: 'product' for physical products, 'service' for consultation services
+    productType: text("product_type").default("product").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -62,7 +64,8 @@ export const products = pgTable(
   },
   (table) => [
     index("idx_products_category").on(table.categoryId),
-    check("products_price_positive", sql`${table.price} > 0`),
+    index("idx_products_type").on(table.productType),
+    check("products_price_valid", sql`${table.price} >= 0`), // Allow 0 for free services
     check("products_stock_positive", sql`${table.stock} >= 0`),
     check(
       "products_rating_valid",
