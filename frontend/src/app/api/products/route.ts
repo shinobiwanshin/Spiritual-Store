@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
 
     const exclude = searchParams.get("exclude");
     const zodiac = searchParams.get("zodiac");
+    const productType = searchParams.get("type"); // 'product' or 'service'
 
     const conditions = [];
 
@@ -68,6 +69,14 @@ export async function GET(request: NextRequest) {
       conditions.push(sql`${products.price} <= ${maxPrice}`);
     }
 
+    // Filter by product type (product/service)
+    if (
+      productType &&
+      (productType === "product" || productType === "service")
+    ) {
+      conditions.push(eq(products.productType, productType));
+    }
+
     // 1. Get total count for pagination
     let countQuery = db
       .select({ count: sql<number>`count(*)` })
@@ -101,6 +110,7 @@ export async function GET(request: NextRequest) {
         benefits: products.benefits,
         howToWear: products.howToWear,
         zodiacCompatibility: products.zodiacCompatibility,
+        productType: products.productType,
       })
       .from(products)
       .leftJoin(categories, eq(products.categoryId, categories.id));

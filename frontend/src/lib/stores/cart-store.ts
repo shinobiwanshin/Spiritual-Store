@@ -94,6 +94,19 @@ export const useCartStore = create<CartState>()(
           set({ items: [...currentItems, { ...product, quantity: 1 }] });
         }
 
+        // Skip API sync for service items (they're not real products in DB with valid UUIDs)
+        // Services are added with slug-based IDs
+        const isServiceItem =
+          product.id.startsWith("service-") ||
+          product.id === "sampurna-kundali" ||
+          product.id === "monthly-kundali" ||
+          product.id === "complete-life-reading" ||
+          !product.id.includes("-") || // Not a UUID
+          product.id.length < 36; // UUIDs are 36 chars
+        if (isServiceItem) {
+          return;
+        }
+
         // Sync with server if user is authenticated
         try {
           await axios.post("/api/cart", { productId: product.id, quantity: 1 });

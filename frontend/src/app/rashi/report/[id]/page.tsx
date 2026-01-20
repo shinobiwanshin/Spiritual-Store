@@ -50,6 +50,22 @@ interface FullReport {
   createdAt: string;
 }
 
+const ChartRenderer = ({ data, alt }: { data: string; alt: string }) => {
+  console.log("Chart Data for", alt, ":", data?.substring(0, 100)); // Debug log
+
+  if (!data) return <div className="p-4 text-red-500">No Data</div>;
+
+  if (typeof data === "string" && data.trim().startsWith("<svg")) {
+    return (
+      <div
+        className="w-full max-w-sm [&>svg]:w-full [&>svg]:h-auto"
+        dangerouslySetInnerHTML={{ __html: data }}
+      />
+    );
+  }
+  return <img src={data} alt={alt} className="w-full max-w-sm" />;
+};
+
 export default function ReportPage() {
   const params = useParams();
   const reportId = params.id as string;
@@ -84,6 +100,20 @@ export default function ReportPage() {
 
   const downloadChart = async (chartUrl: string, filename: string) => {
     try {
+      if (chartUrl.trim().startsWith("<svg")) {
+        const blob = new Blob([chartUrl], { type: "image/svg+xml" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        toast.success(`${filename} downloaded!`);
+        return;
+      }
+
       const response = await fetch(chartUrl);
       if (!response.ok) {
         toast.error(`Failed to download ${filename}, opening in new tab`);
@@ -304,10 +334,9 @@ export default function ReportPage() {
                   </Button>
                 </div>
                 <div className="bg-white rounded-xl p-4 flex items-center justify-center">
-                  <img
-                    src={report.kundali.charts.rasi}
+                  <ChartRenderer
+                    data={report.kundali.charts.rasi}
                     alt="Rasi Chart"
-                    className="w-full max-w-sm"
                   />
                 </div>
               </CardContent>
@@ -339,10 +368,9 @@ export default function ReportPage() {
                   </Button>
                 </div>
                 <div className="bg-white rounded-xl p-4 flex items-center justify-center">
-                  <img
-                    src={report.kundali.charts.navamsa}
+                  <ChartRenderer
+                    data={report.kundali.charts.navamsa}
                     alt="Navamsa Chart"
-                    className="w-full max-w-sm"
                   />
                 </div>
               </CardContent>
