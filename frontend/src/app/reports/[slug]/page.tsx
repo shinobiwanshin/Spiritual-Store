@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
@@ -155,18 +155,15 @@ export default function ReportDetailPage() {
     }
 
     addItem({
+      id: slug,
+      title: report.title,
       price: report.price,
       image: "",
-      productType: "service",
     });
     toast.success(`${report.title} added to cart!`);
   };
 
   // Check for pending cart item on mount
-  // Check for pending cart item on mount
-  useState(() => {
-    // Replaced with useEffect below
-  });
 
   useEffect(() => {
     if (isSignedIn) {
@@ -180,7 +177,6 @@ export default function ReportDetailPage() {
               title: item.title,
               price: item.price,
               image: item.image,
-              productType: "service",
             });
             toast.success(`${item.title} added to cart!`);
             sessionStorage.removeItem("pendingCartItem");

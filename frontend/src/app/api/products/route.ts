@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, products, categories } from "@/db";
-import { eq, ilike, or, and, sql } from "drizzle-orm";
+import { eq, ne, ilike, or, and, sql } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
   try {

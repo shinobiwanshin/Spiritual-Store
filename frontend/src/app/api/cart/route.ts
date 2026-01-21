@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { cartItems, products } from "@/db/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { z } from "zod";
+import { cartProtection } from "@/lib/arcjet";
 
 // Validation schemas
 const addItemSchema = z.object({
@@ -15,6 +16,36 @@ const updateItemSchema = z.object({
   productId: z.string().uuid(),
   quantity: z.number().int().positive(),
 });
+
+// Helper to check Arcjet protection for cart routes
+async function checkArcjetProtection(request: NextRequest) {
+  const decision = await cartProtection.protect(request, { requested: 1 });
+
+  if (decision.isDenied()) {
+    console.warn("Arcjet blocked cart request:", {
+      reason: decision.reason,
+      ip: request.headers.get("x-forwarded-for") || "unknown",
+    });
+
+    if (decision.reason.isRateLimit()) {
+      return NextResponse.json(
+        { error: "Too many requests. Please slow down." },
+        { status: 429 },
+      );
+    }
+
+    if (decision.reason.isBot()) {
+      return NextResponse.json(
+        { error: "Automated requests not allowed." },
+        { status: 403 },
+      );
+    }
+
+    return NextResponse.json({ error: "Request blocked." }, { status: 403 });
+  }
+
+  return null; // No block, proceed
+}
 
 // GET - Fetch user's cart items
 export async function GET() {

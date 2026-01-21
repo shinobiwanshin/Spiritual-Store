@@ -232,7 +232,7 @@ export const orders = pgTable(
   ],
 );
 
-export const ordersRelations = relations(orders, ({ many }) => ({
+export const ordersRelations = relations(orders, ({ one, many }) => ({
   orderItems: many(orderItems),
   payments: many(payments),
   user: one(users, {

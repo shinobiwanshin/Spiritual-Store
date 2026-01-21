@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { auth } from "@clerk/nextjs/server";
 import { db, orders, orderItems, cartItems, payments } from "@/db";
 import { eq } from "drizzle-orm";
+import { paymentProtection } from "@/lib/arcjet";
 
 // Type guard for validating item structure
 interface OrderItem {
@@ -33,6 +34,31 @@ function isValidItem(item: unknown): item is OrderItem {
 
 export async function POST(request: NextRequest) {
   try {
+    // =========================================================================
+    // ARCJET SECURITY CHECK
+    // Payment verification is a critical route - strict protection required
+    // =========================================================================
+    const decision = await paymentProtection.protect(request, { requested: 1 });
+
+    if (decision.isDenied()) {
+      console.warn("Arcjet blocked payment verification:", {
+        reason: decision.reason,
+        ip: request.headers.get("x-forwarded-for") || "unknown",
+      });
+
+      if (decision.reason.isRateLimit()) {
+        return NextResponse.json(
+          { error: "Too many payment attempts. Please wait and try again." },
+          { status: 429 },
+        );
+      }
+
+      return NextResponse.json(
+        { error: "Request blocked for security reasons." },
+        { status: 403 },
+      );
+    }
+
     // Get authenticated user from server-side auth (not client-provided)
     const { userId } = await auth();
 
