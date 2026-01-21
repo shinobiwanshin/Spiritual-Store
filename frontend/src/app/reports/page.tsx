@@ -14,7 +14,6 @@ const reports = [
     price: "₹999",
     icon: "calendar_today",
     color: "from-blue-500 to-cyan-500",
-    link: "/reports/1-year-prediction",
     cta: "Get Report",
   },
   {
@@ -25,7 +24,6 @@ const reports = [
     price: "₹2,499",
     icon: "date_range",
     color: "from-purple-500 to-indigo-500",
-    link: "/reports/3-year-prediction",
     cta: "Get Report",
   },
   {
@@ -36,10 +34,17 @@ const reports = [
     price: "₹3,999",
     icon: "history",
     color: "from-orange-500 to-red-500",
-    link: "/reports/5-year-prediction",
     cta: "Get Report",
   },
 ];
+
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Astrological Reports | AstraSpiritual",
+  description:
+    "Get detailed Vedic astrology prediction reports for 1, 3, or 5 years. Understand your future and make informed life decisions.",
+};
 
 export default function ReportsPage() {
   return (
@@ -83,22 +88,21 @@ export default function ReportsPage() {
                 {report.description}
               </p>
               <div className="flex items-center justify-between mt-auto">
-                <span
-                  className={`font-bold text-lg ${report.price === "FREE" ? "text-green-500" : "text-foreground"}`}
-                >
+                <span className="font-bold text-lg text-foreground">
                   {report.price}
                 </span>
-                <Link href={report.link}>
-                  <Button
-                    variant="outline"
-                    className="rounded-full gap-2 group-hover:bg-primary group-hover:text-white transition-all"
-                  >
+                <Button
+                  asChild
+                  variant="outline"
+                  className="rounded-full gap-2 group-hover:bg-primary group-hover:text-white transition-all"
+                >
+                  <Link href={`/reports/${report.slug}`}>
                     {report.cta}
                     <span className="material-symbols-outlined text-lg">
                       arrow_forward
                     </span>
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
               </div>
             </div>
           ))}

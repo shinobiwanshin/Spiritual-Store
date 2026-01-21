@@ -8,16 +8,25 @@ import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
 import { useCartStore } from "@/lib/stores/cart-store";
 
 // Define menu structure
-type MenuItem = {
+type LinkItem = {
   label: string;
-  href?: string;
-  type: "link" | "dropdown";
-  items?: { label: string; href: string; icon: string }[];
+  href: string;
+  type: "link";
+  icon?: string;
 };
 
+type DropdownItem = {
+  label: string;
+  type: "dropdown";
+  items: { label: string; href: string; icon: string }[];
+  icon?: string;
+};
+
+type MenuItem = LinkItem | DropdownItem;
+
 const menuItems: MenuItem[] = [
-  { label: "Home", href: "/", type: "link" },
-  { label: "About Us", href: "/about", type: "link" },
+  { label: "Home", href: "/", type: "link", icon: "home" },
+  { label: "About Us", href: "/about", type: "link", icon: "info" },
   {
     label: "Services",
     type: "dropdown",
@@ -58,8 +67,14 @@ const menuItems: MenuItem[] = [
     label: "Monthly Kundali",
     href: "/services/monthly-kundali",
     type: "link",
+    icon: "calendar_month",
   },
-  { label: "Know Your Birth Kundali", href: "/rashi", type: "link" },
+  {
+    label: "Know Your Birth Kundali",
+    href: "/rashi",
+    type: "link",
+    icon: "auto_awesome",
+  },
   {
     label: "Reports",
     type: "dropdown",
@@ -81,7 +96,7 @@ const menuItems: MenuItem[] = [
       },
     ],
   },
-  { label: "Products", href: "/shop", type: "link" },
+  { label: "Products", href: "/shop", type: "link", icon: "shopping_bag" },
 ];
 
 export default function Navbar() {
@@ -130,6 +145,7 @@ export default function Navbar() {
             {menuItems.map((item, idx) => {
               if (item.type === "dropdown") {
                 const isActive = activeDropdown === item.label;
+                const dropdownId = `dropdown-${idx}`;
                 return (
                   <div
                     key={idx}
@@ -140,6 +156,9 @@ export default function Navbar() {
                       onClick={() =>
                         setActiveDropdown(isActive ? null : item.label)
                       }
+                      aria-expanded={isActive}
+                      aria-haspopup="menu"
+                      aria-controls={dropdownId}
                       className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-primary rounded-full hover:bg-background transition-all flex items-center gap-1 whitespace-nowrap"
                     >
                       {item.label}
@@ -152,8 +171,11 @@ export default function Navbar() {
 
                     {/* Dropdown Menu */}
                     {isActive && (
-                      <div className="absolute top-full left-0 mt-2 w-64 bg-background border border-border rounded-2xl shadow-2xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden z-20">
-                        {item.items?.map((subItem) => (
+                      <div
+                        id={dropdownId}
+                        className="absolute top-full left-0 mt-2 w-64 bg-background border border-border rounded-2xl shadow-2xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden z-20"
+                      >
+                        {item.items.map((subItem) => (
                           <Link
                             key={subItem.href}
                             href={subItem.href}
@@ -177,7 +199,7 @@ export default function Navbar() {
               return (
                 <Link
                   key={idx}
-                  href={item.href!}
+                  href={item.href}
                   className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-primary rounded-full hover:bg-background transition-all whitespace-nowrap"
                 >
                   {item.label}
@@ -267,7 +289,7 @@ export default function Navbar() {
 
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-60 lg:hidden">
+        <div className="fixed inset-0 z-50 lg:hidden">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
@@ -307,6 +329,7 @@ export default function Navbar() {
               {menuItems.map((item, idx) => {
                 if (item.type === "dropdown") {
                   const isMobileActive = activeMobileDropdown === item.label;
+                  const mobileDropdownId = `mobile-dropdown-${idx}`;
                   return (
                     <div key={idx} className="space-y-1">
                       <button
@@ -315,6 +338,8 @@ export default function Navbar() {
                             isMobileActive ? null : item.label,
                           )
                         }
+                        aria-expanded={isMobileActive}
+                        aria-controls={mobileDropdownId}
                         className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl transition-all font-medium ${isMobileActive ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"}`}
                       >
                         <span className="flex items-center gap-3">
@@ -336,9 +361,12 @@ export default function Navbar() {
 
                       {/* Accordion Content */}
                       {isMobileActive && (
-                        <div className="pl-4 space-y-1 animate-in slide-in-from-top-2 fade-in duration-200">
+                        <div
+                          id={mobileDropdownId}
+                          className="pl-4 space-y-1 animate-in slide-in-from-top-2 fade-in duration-200"
+                        >
                           <div className="border-l-2 border-primary/20 pl-2 space-y-1">
-                            {item.items?.map((subItem) => (
+                            {item.items.map((subItem) => (
                               <Link
                                 key={subItem.href}
                                 href={subItem.href}
@@ -361,24 +389,12 @@ export default function Navbar() {
                 return (
                   <Link
                     key={idx}
-                    href={item.href!}
+                    href={item.href}
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-foreground hover:bg-muted hover:text-primary transition-all group"
                   >
                     <span className="material-symbols-outlined text-muted-foreground group-hover:text-primary transition-colors">
-                      {item.label === "Home"
-                        ? "home"
-                        : item.label === "About Us"
-                          ? "info"
-                          : item.label === "Monthly Kundali"
-                            ? "calendar_month"
-                            : item.label === "Know Your Birth Kundali"
-                              ? "auto_awesome"
-                              : item.label === "Reports"
-                                ? "description"
-                                : item.label === "Products"
-                                  ? "shopping_bag"
-                                  : "circle"}
+                      {item.icon || "circle"}
                     </span>
                     <span className="font-medium">{item.label}</span>
                   </Link>

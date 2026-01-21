@@ -28,7 +28,7 @@ export const formatPrice = (price: string): string => {
   const parsed = parseFloat(price);
   if (isNaN(parsed)) return "N/A";
   if (parsed === 0) return "FREE";
-  return `₹${parsed.toLocaleString()}`;
+  return `₹${parsed.toLocaleString("en-IN")}`;
 };
 
 export default function ServiceDetailPage() {
@@ -111,7 +111,14 @@ export default function ServiceDetailPage() {
           price: targetService.price,
           image: targetService.howToWear?.icon || "auto_awesome",
         };
-        sessionStorage.setItem("pendingCartItem", JSON.stringify(pendingItem));
+        try {
+          sessionStorage.setItem(
+            "pendingCartItem",
+            JSON.stringify(pendingItem),
+          );
+        } catch (e) {
+          console.error("Failed to save pending item", e);
+        }
         openSignIn({ afterSignInUrl: window.location.href });
         return;
       }
@@ -144,6 +151,25 @@ export default function ServiceDetailPage() {
       }
     }
   }, [isSignedIn, addItem]);
+
+  if (error) {
+    return (
+      <main className="min-h-screen bg-background">
+        <Navbar />
+        <div className="max-w-4xl mx-auto px-6 py-40 text-center">
+          <span className="material-symbols-outlined text-5xl text-destructive mb-4">
+            error
+          </span>
+          <h1 className="text-3xl font-bold mb-4">Something went wrong</h1>
+          <p className="text-muted-foreground mb-8">{error}</p>
+          <Link href="/services">
+            <Button>Return to Services</Button>
+          </Link>
+        </div>
+        <Footer />
+      </main>
+    );
+  }
 
   if (loading) {
     return (
@@ -186,7 +212,7 @@ export default function ServiceDetailPage() {
       {/* Hero Section */}
       <section className="pt-28 pb-20 relative overflow-hidden">
         {/* Animated Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-orange-500/5"></div>
+        <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-background to-orange-500/5"></div>
         <div className="absolute top-20 left-10 w-96 h-96 bg-primary/20 rounded-full blur-[100px] animate-pulse"></div>
         <div className="absolute bottom-0 right-10 w-[500px] h-[500px] bg-orange-500/10 rounded-full blur-[120px]"></div>
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-secondary/5 rounded-full blur-[150px]"></div>
@@ -199,25 +225,25 @@ export default function ServiceDetailPage() {
               <div className="relative">
                 {/* Outer Glow Ring */}
                 <div
-                  className={`absolute inset-0 rounded-[3rem] bg-gradient-to-br ${service.howToWear?.color || "from-primary to-orange-500"} blur-2xl opacity-30 scale-110`}
+                  className={`absolute inset-0 rounded-[3rem] bg-linear-to-br ${service.howToWear?.color?.replace("gradient-to", "linear-to") || "from-primary to-orange-500"} blur-2xl opacity-30 scale-110`}
                 ></div>
 
                 {/* Main Card */}
-                <div className="relative w-64 h-64 md:w-80 md:h-80 rounded-[3rem] bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-xl border border-white/10 shadow-2xl flex items-center justify-center">
+                <div className="relative w-64 h-64 md:w-80 md:h-80 rounded-[3rem] bg-linear-to-br from-card/80 to-card/40 backdrop-blur-xl border border-white/10 shadow-2xl flex items-center justify-center">
                   {/* Inner Gradient Circle */}
                   <div
-                    className={`size-32 md:size-48 rounded-full bg-gradient-to-br ${service.howToWear?.color || "from-primary to-orange-500"} flex items-center justify-center shadow-2xl relative overflow-hidden`}
+                    className={`size-32 md:size-48 rounded-full bg-linear-to-br ${service.howToWear?.color?.replace("gradient-to", "linear-to") || "from-primary to-orange-500"} flex items-center justify-center shadow-2xl relative overflow-hidden`}
                   >
                     {/* Shine Effect */}
-                    <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/20 to-white/0"></div>
+                    <div className="absolute inset-0 bg-linear-to-tr from-white/0 via-white/20 to-white/0"></div>
                     <span className="material-symbols-outlined text-white text-6xl md:text-8xl relative z-10">
                       {service.howToWear?.icon || "auto_awesome"}
                     </span>
                   </div>
 
                   {/* Decorative Elements */}
-                  <div className="absolute -top-3 -right-3 size-6 md:size-8 rounded-full bg-gradient-to-br from-primary to-orange-500 animate-bounce"></div>
-                  <div className="absolute -bottom-2 -left-2 size-4 md:size-6 rounded-full bg-gradient-to-br from-orange-500 to-yellow-500 animate-pulse"></div>
+                  <div className="absolute -top-3 -right-3 size-6 md:size-8 rounded-full bg-linear-to-br from-primary to-orange-500 animate-bounce"></div>
+                  <div className="absolute -bottom-2 -left-2 size-4 md:size-6 rounded-full bg-linear-to-br from-orange-500 to-yellow-500 animate-pulse"></div>
                 </div>
 
                 {/* Floating Badge */}
@@ -252,7 +278,7 @@ export default function ServiceDetailPage() {
                     </span>
                   ) : (
                     <>
-                      <span className="text-5xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-orange-500 to-primary">
+                      <span className="text-5xl md:text-6xl font-bold bg-clip-text text-transparent bg-linear-to-r from-primary via-orange-500 to-primary">
                         {formatPrice(service.price)}
                       </span>
                       <span className="text-lg text-muted-foreground">
@@ -263,7 +289,7 @@ export default function ServiceDetailPage() {
                 </div>
                 <div className="flex flex-col gap-4 max-w-md mx-auto lg:mx-0 lg:max-w-none lg:flex-row">
                   <Button
-                    className="w-full lg:w-auto h-14 md:h-16 px-8 text-lg font-semibold rounded-2xl gap-3 bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 shadow-lg shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 hover:scale-[1.02] active:scale-95 transition-all duration-300"
+                    className="w-full lg:w-auto h-14 md:h-16 px-8 text-lg font-semibold rounded-2xl gap-3 bg-linear-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 shadow-lg shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 hover:scale-[1.02] active:scale-95 transition-all duration-300"
                     onClick={() => {
                       if (
                         slug === "sampurna-kundali" ||
@@ -277,10 +303,22 @@ export default function ServiceDetailPage() {
                       }
                     }}
                   >
-                    <span className="material-symbols-outlined text-2xl">
-                      add_shopping_cart
-                    </span>
-                    Book Consultation
+                    {slug === "sampurna-kundali" ||
+                    slug === "monthly-kundali" ? (
+                      <>
+                        <span className="material-symbols-outlined text-2xl">
+                          add_shopping_cart
+                        </span>
+                        Book Consultation
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-2xl">
+                          expand_more
+                        </span>
+                        View Plans
+                      </>
+                    )}
                   </Button>
 
                   {/* Show Premium Plans button only if not on a premium page */}
@@ -310,7 +348,7 @@ export default function ServiceDetailPage() {
       {/* What You'll Get */}
       {service.benefits && service.benefits.length > 0 && (
         <section className="py-12 md:py-20 px-4 md:px-6 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-muted/50 to-background"></div>
+          <div className="absolute inset-0 bg-linear-to-b from-muted/50 to-background"></div>
           <div className="max-w-5xl mx-auto relative z-10">
             <div className="text-center mb-8 md:mb-12">
               <Badge className="bg-primary/10 text-primary border-primary/20 mb-4">
@@ -327,7 +365,7 @@ export default function ServiceDetailPage() {
                   className="group relative p-6 bg-card/50 backdrop-blur-sm rounded-2xl border border-white/10 hover:border-primary/30 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="size-12 bg-gradient-to-br from-primary/20 to-orange-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
+                    <div className="size-12 bg-linear-to-br from-primary/20 to-orange-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
                       <span className="material-symbols-outlined text-primary text-xl">
                         check_circle
                       </span>
@@ -342,7 +380,7 @@ export default function ServiceDetailPage() {
       )}
 
       {/* How It Works */}
-      <section className="py-20 px-6 bg-gradient-to-b from-background to-muted/30">
+      <section className="py-20 px-6 bg-linear-to-b from-background to-muted/30">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <Badge className="bg-primary/10 text-primary border-primary/20 mb-4">
@@ -382,11 +420,11 @@ export default function ServiceDetailPage() {
               <div key={step.title} className="relative text-center group">
                 {/* Connector Line */}
                 {idx < 3 && (
-                  <div className="hidden md:block absolute top-8 left-[60%] w-full h-0.5 bg-gradient-to-r from-primary/30 to-transparent"></div>
+                  <div className="hidden md:block absolute top-8 left-[60%] w-full h-0.5 bg-linear-to-r from-primary/30 to-transparent"></div>
                 )}
                 <div className="relative mb-4">
                   <div
-                    className={`size-16 md:size-20 mx-auto rounded-2xl bg-gradient-to-br ${step.color} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}
+                    className={`size-16 md:size-20 mx-auto rounded-2xl bg-linear-to-br ${step.color} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}
                   >
                     <span className="material-symbols-outlined text-white text-2xl md:text-3xl">
                       {step.icon}
@@ -426,12 +464,13 @@ export default function ServiceDetailPage() {
             <div className="grid md:grid-cols-2 gap-8">
               {[service!, ...premiumServices]
                 .filter(
-                  (s, i, a) => a.findIndex((x) => x.slug === s.slug) === i,
+                  (s, i, a) =>
+                    Boolean(s) && a.findIndex((x) => x.slug === s.slug) === i,
                 )
                 .map((plan) => (
                   <div
                     key={plan.id}
-                    className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-primary/10 via-orange-500/10 to-primary/10 border border-primary/20 p-8 hover:shadow-2xl transition-all group"
+                    className="relative rounded-3xl overflow-hidden bg-linear-to-br from-primary/10 via-orange-500/10 to-primary/10 border border-primary/20 p-8 hover:shadow-2xl transition-all group"
                   >
                     {plan.slug === "sampurna-kundali" && (
                       <div className="absolute top-4 right-4">
@@ -441,7 +480,7 @@ export default function ServiceDetailPage() {
                       </div>
                     )}
                     <div className="flex flex-col h-full">
-                      <div className="size-16 rounded-2xl bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center shadow-lg mb-6">
+                      <div className="size-16 rounded-2xl bg-linear-to-br from-primary to-orange-500 flex items-center justify-center shadow-lg mb-6">
                         <span className="material-symbols-outlined text-white text-3xl">
                           {plan.howToWear?.icon || "workspace_premium"}
                         </span>
@@ -497,7 +536,7 @@ export default function ServiceDetailPage() {
                           )}
                           <Button
                             onClick={() => handleAddToCart(plan)}
-                            className="w-full sm:w-auto h-12 px-8 rounded-full gap-2 bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 shadow-lg hover:shadow-primary/25 text-base font-semibold"
+                            className="w-full sm:w-auto h-12 px-8 rounded-full gap-2 bg-linear-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 shadow-lg hover:shadow-primary/25 text-base font-semibold"
                           >
                             <span className="material-symbols-outlined text-xl">
                               add_shopping_cart
@@ -527,7 +566,7 @@ export default function ServiceDetailPage() {
                   <Card className="h-full border-primary/10 hover:border-primary/30 hover:shadow-xl transition-all group cursor-pointer">
                     <CardContent className="p-4 md:p-6 flex flex-col items-center text-center">
                       <div
-                        className={`size-12 md:size-14 rounded-xl bg-gradient-to-br ${s.howToWear?.color || "from-primary to-orange-500"} flex items-center justify-center shadow-lg mb-3 md:mb-4 group-hover:scale-110 transition-transform shrink-0`}
+                        className={`size-12 md:size-14 rounded-xl bg-linear-to-br ${s.howToWear?.color?.replace("gradient-to", "linear-to") || "from-primary to-orange-500"} flex items-center justify-center shadow-lg mb-3 md:mb-4 group-hover:scale-110 transition-transform shrink-0`}
                       >
                         <span className="material-symbols-outlined text-white text-xl md:text-2xl">
                           {s.howToWear?.icon || "auto_awesome"}

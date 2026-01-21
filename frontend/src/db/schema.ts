@@ -121,6 +121,10 @@ export const cartItemsRelations = relations(cartItems, ({ one }) => ({
     fields: [cartItems.productId],
     references: [products.id],
   }),
+  user: one(users, {
+    fields: [cartItems.userId],
+    references: [users.id],
+  }),
 }));
 
 // ============================================
@@ -146,6 +150,13 @@ export const addresses = pgTable(
   },
   (table) => [index("idx_addresses_user").on(table.userId)],
 );
+
+export const addressesRelations = relations(addresses, ({ one }) => ({
+  user: one(users, {
+    fields: [addresses.userId],
+    references: [users.id],
+  }),
+}));
 
 // ============================================
 // ORDERS
@@ -224,6 +235,10 @@ export const orders = pgTable(
 export const ordersRelations = relations(orders, ({ many }) => ({
   orderItems: many(orderItems),
   payments: many(payments),
+  user: one(users, {
+    fields: [orders.userId],
+    references: [users.id],
+  }),
 }));
 
 // ============================================
@@ -359,6 +374,10 @@ export const reviewsRelations = relations(reviews, ({ one }) => ({
     fields: [reviews.orderId],
     references: [orders.id],
   }),
+  user: one(users, {
+    fields: [reviews.userId],
+    references: [users.id],
+  }),
 }));
 
 // ============================================
@@ -424,6 +443,10 @@ export const wishlistItemsRelations = relations(wishlistItems, ({ one }) => ({
     fields: [wishlistItems.productId],
     references: [products.id],
   }),
+  user: one(users, {
+    fields: [wishlistItems.userId],
+    references: [users.id],
+  }),
 }));
 
 // ============================================
@@ -455,6 +478,13 @@ export const rashiReports = pgTable(
   },
   (table) => [index("idx_rashi_reports_user").on(table.userId)],
 );
+
+export const rashiReportsRelations = relations(rashiReports, ({ one }) => ({
+  user: one(users, {
+    fields: [rashiReports.userId],
+    references: [users.id],
+  }),
+}));
 
 // ============================================
 // USERS
