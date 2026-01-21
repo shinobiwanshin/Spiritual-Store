@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth, useClerk } from "@clerk/nextjs";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -11,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { toast } from "sonner";
+import InternationalSupport from "@/components/InternationalSupport";
 
 interface Service {
   id: string;
@@ -19,6 +21,7 @@ interface Service {
   description: string;
   price: string;
   benefits: string[];
+  images?: string[];
   howToWear: { icon?: string; color?: string };
   isPremium?: boolean; // Added for premium filtering
 }
@@ -220,7 +223,7 @@ export default function ServiceDetailPage() {
         <div className="max-w-7xl mx-auto px-4 md:px-6 relative z-10">
           <div className="flex flex-col-reverse lg:grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* Visual Element - Shows second on mobile (reversed), first on desktop */}
-            <div className="relative flex items-center justify-center mt-8 lg:mt-0">
+            <div className="relative w-full flex items-center justify-center lg:justify-start mt-8 lg:mt-0">
               {/* Main Visual Container */}
               <div className="relative">
                 {/* Outer Glow Ring */}
@@ -228,18 +231,30 @@ export default function ServiceDetailPage() {
                   className={`absolute inset-0 rounded-[3rem] bg-linear-to-br ${service.howToWear?.color?.replace("gradient-to", "linear-to") || "from-primary to-orange-500"} blur-2xl opacity-30 scale-110`}
                 ></div>
 
-                {/* Main Card */}
-                <div className="relative w-64 h-64 md:w-80 md:h-80 rounded-[3rem] bg-linear-to-br from-card/80 to-card/40 backdrop-blur-xl border border-white/10 shadow-2xl flex items-center justify-center">
-                  {/* Inner Gradient Circle */}
-                  <div
-                    className={`size-32 md:size-48 rounded-full bg-linear-to-br ${service.howToWear?.color?.replace("gradient-to", "linear-to") || "from-primary to-orange-500"} flex items-center justify-center shadow-2xl relative overflow-hidden`}
-                  >
-                    {/* Shine Effect */}
-                    <div className="absolute inset-0 bg-linear-to-tr from-white/0 via-white/20 to-white/0"></div>
-                    <span className="material-symbols-outlined text-white text-6xl md:text-8xl relative z-10">
-                      {service.howToWear?.icon || "auto_awesome"}
-                    </span>
-                  </div>
+                {/* Main Card - Shows Image or Fallback Icon */}
+                <div className="relative w-64 h-64 md:w-80 md:h-80 rounded-[3rem] bg-linear-to-br from-card/80 to-card/40 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden">
+                  {service.images && service.images.length > 0 ? (
+                    /* Actual Service Image */
+                    <Image
+                      src={service.images[0]}
+                      alt={service.title}
+                      fill
+                      className="object-cover"
+                      priority
+                    />
+                  ) : (
+                    /* Fallback Icon */
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div
+                        className={`size-32 md:size-48 rounded-full bg-linear-to-br ${service.howToWear?.color?.replace("gradient-to", "linear-to") || "from-primary to-orange-500"} flex items-center justify-center shadow-2xl relative overflow-hidden`}
+                      >
+                        <div className="absolute inset-0 bg-linear-to-tr from-white/0 via-white/20 to-white/0"></div>
+                        <span className="material-symbols-outlined text-white text-6xl md:text-8xl relative z-10">
+                          {service.howToWear?.icon || "auto_awesome"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Decorative Elements */}
                   <div className="absolute -top-3 -right-3 size-6 md:size-8 rounded-full bg-linear-to-br from-primary to-orange-500 animate-bounce"></div>
@@ -374,6 +389,10 @@ export default function ServiceDetailPage() {
                   </div>
                 </div>
               ))}
+            </div>
+
+            <div className="max-w-4xl mx-auto mt-16">
+              <InternationalSupport />
             </div>
           </div>
         </section>
@@ -587,6 +606,13 @@ export default function ServiceDetailPage() {
         </section>
       )}
 
+      {!relatedServices.length && (
+        <div className="max-w-4xl mx-auto px-6 mb-16">
+          {/* Support section logic if needed when no related services */}
+        </div>
+      )}
+
+      {/* Footer */}
       <Footer />
     </main>
   );

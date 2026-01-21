@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth, useClerk } from "@clerk/nextjs";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -18,6 +19,7 @@ interface Service {
   price: string;
   benefits: string[];
   howToWear: { icon?: string; color?: string };
+  images?: string[]; // Added image support
 }
 
 export default function ServicesPage() {
@@ -136,14 +138,26 @@ export default function ServicesPage() {
                 <div className="grid md:grid-cols-2 gap-8 p-8 md:p-12">
                   {/* Left Content */}
                   <div className="space-y-6">
-                    {/* Icon */}
-                    <div
-                      className={`size-20 rounded-2xl bg-gradient-to-br ${currentService.howToWear?.color || "from-primary to-orange-500"} flex items-center justify-center shadow-xl`}
-                    >
-                      <span className="material-symbols-outlined text-white text-4xl">
-                        {currentService.howToWear?.icon || "auto_awesome"}
-                      </span>
-                    </div>
+                    {/* Icon or Image */}
+                    {currentService.images &&
+                    currentService.images.length > 0 ? (
+                      <div className="relative size-24 md:size-32 rounded-2xl overflow-hidden shadow-xl border border-white/10">
+                        <Image
+                          src={currentService.images[0]}
+                          alt={currentService.title}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        className={`size-20 rounded-2xl bg-gradient-to-br ${currentService.howToWear?.color || "from-primary to-orange-500"} flex items-center justify-center shadow-xl`}
+                      >
+                        <span className="material-symbols-outlined text-white text-4xl">
+                          {currentService.howToWear?.icon || "auto_awesome"}
+                        </span>
+                      </div>
+                    )}
 
                     <div>
                       <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4">
@@ -398,7 +412,6 @@ export default function ServicesPage() {
           </div>
         </div>
       </section>
-
 
       {/* How It Works */}
       <section className="py-16 px-6 bg-muted/30">
