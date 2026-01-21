@@ -105,12 +105,12 @@ export default function Footer() {
               </a>
             </li>
             <li>
-              <a
-                href="#"
+              <Link
+                href="/contact"
                 className="hover:text-white hover:translate-x-1 transition-all inline-block"
               >
                 Contact Us
-              </a>
+              </Link>
             </li>
           </ul>
         </div>

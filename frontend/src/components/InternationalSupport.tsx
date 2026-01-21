@@ -37,9 +37,9 @@ export default function InternationalSupport() {
             variant="outline"
             className="border-indigo-500/50 text-indigo-100 hover:bg-indigo-900/50 hover:text-white"
           >
-            <a href="mailto:support@astraspiritual.com">
+            <a href="/contact">
               <span className="material-symbols-outlined mr-2 text-lg">
-                mail
+                support_agent
               </span>
               Contact Support
             </a>
