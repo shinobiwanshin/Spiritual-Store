@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { toast } from "sonner";
+import InternationalSupport from "@/components/InternationalSupport";
 
 interface Service {
   id: string;
@@ -389,6 +390,10 @@ export default function ServiceDetailPage() {
                 </div>
               ))}
             </div>
+
+            <div className="max-w-4xl mx-auto mt-16">
+              <InternationalSupport />
+            </div>
           </div>
         </section>
       )}
@@ -601,6 +606,13 @@ export default function ServiceDetailPage() {
         </section>
       )}
 
+      {!relatedServices.length && (
+        <div className="max-w-4xl mx-auto px-6 mb-16">
+          {/* Support section logic if needed when no related services */}
+        </div>
+      )}
+
+      {/* Footer */}
       <Footer />
     </main>
   );

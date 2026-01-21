@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { notFound, useParams } from "next/navigation";
+import InternationalSupport from "@/components/InternationalSupport";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -244,12 +245,6 @@ export default function ReportDetailPage() {
                     className="object-cover transition-transform duration-700 group-hover:scale-110"
                     priority
                   />
-                  {/* Overlay for text readability if needed, or just let image shine */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-6">
-                    <span className="text-white font-medium">
-                      Sample Preview
-                    </span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -280,6 +275,10 @@ export default function ReportDetailPage() {
               </div>
             ))}
           </div>
+        </div>
+
+        <div className="max-w-4xl mx-auto mt-16">
+          <InternationalSupport />
         </div>
       </section>
 
