@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
+import Image from "next/image";
 import { notFound, useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -21,6 +21,7 @@ const reportsData: Record<
     features: string[];
     icon: string;
     color: string;
+    image: string;
     howItWorks: { title: string; desc: string; icon: string }[];
   }
 > = {
@@ -31,6 +32,7 @@ const reportsData: Record<
     price: "999",
     icon: "calendar_today",
     color: "from-blue-500 to-cyan-500",
+    image: "/images/reports/comprehensive-report.jpg",
     features: [
       "Month-by-month detailed predictions",
       "Analysis of key planetary transits",
@@ -64,6 +66,7 @@ const reportsData: Record<
     price: "2499",
     icon: "date_range",
     color: "from-purple-500 to-indigo-500",
+    image: "/images/reports/career-report.jpg",
     features: [
       "3-year comprehensive roadmap",
       "Major Dasha & Bhukti analysis",
@@ -97,6 +100,7 @@ const reportsData: Record<
     price: "3999",
     icon: "history",
     color: "from-orange-500 to-red-500",
+    image: "/images/reports/relationship-report.jpg",
     features: [
       "Deep-dive 5-year forecast",
       "Life-changing event predictions",
@@ -230,18 +234,22 @@ export default function ReportDetailPage() {
             {/* Visual */}
             <div className="relative flex justify-center lg:justify-end">
               <div
-                className={`w-80 h-96 rounded-[3rem] bg-gradient-to-br ${report.color} p-1 shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-500`}
+                className={`group relative w-80 h-96 rounded-[3rem] p-1 shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-500 overflow-hidden border-4 border-transparent bg-gradient-to-br ${report.color}`}
               >
-                <div className="bg-background/90 backdrop-blur-sm w-full h-full rounded-[2.8rem] flex flex-col items-center justify-center p-8 text-center border border-white/10">
-                  <span className="material-symbols-outlined text-8xl mb-6 bg-clip-text text-transparent bg-gradient-to-br from-foreground to-muted-foreground">
-                    {report.icon}
-                  </span>
-                  <h3 className="text-2xl font-serif font-bold mb-2">
-                    Vedic Insights
-                  </h3>
-                  <p className="text-muted-foreground text-sm">
-                    Personalized for your unique birth chart
-                  </p>
+                <div className="absolute inset-1 rounded-[2.8rem] overflow-hidden bg-background">
+                  <Image
+                    src={report.image}
+                    alt={report.title}
+                    fill
+                    className="object-cover transition-transform duration-700 group-hover:scale-110"
+                    priority
+                  />
+                  {/* Overlay for text readability if needed, or just let image shine */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-6">
+                    <span className="text-white font-medium">
+                      Sample Preview
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

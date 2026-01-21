@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,7 @@ const reports = [
     icon: "calendar_today",
     color: "from-blue-500 to-cyan-500",
     cta: "Get Report",
+    image: "/images/reports/comprehensive-report.jpg",
   },
   {
     title: "3 Year Prediction Report",
@@ -25,6 +27,7 @@ const reports = [
     icon: "date_range",
     color: "from-purple-500 to-indigo-500",
     cta: "Get Report",
+    image: "/images/reports/career-report.jpg",
   },
   {
     title: "5 Year Prediction Report",
@@ -35,6 +38,7 @@ const reports = [
     icon: "history",
     color: "from-orange-500 to-red-500",
     cta: "Get Report",
+    image: "/images/reports/relationship-report.jpg",
   },
 ];
 
@@ -74,12 +78,13 @@ export default function ReportsPage() {
               key={report.slug}
               className="group relative bg-card hover:bg-muted/50 border border-border rounded-3xl p-8 transition-all hover:shadow-xl hover:-translate-y-1"
             >
-              <div
-                className={`size-14 rounded-2xl bg-gradient-to-br ${report.color} flex items-center justify-center mb-6 shadow-lg`}
-              >
-                <span className="material-symbols-outlined text-white text-3xl">
-                  {report.icon}
-                </span>
+              <div className="relative w-full h-48 mb-6 rounded-2xl overflow-hidden shadow-lg group-hover:shadow-2xl transition-all">
+                <Image
+                  src={report.image}
+                  alt={report.title}
+                  fill
+                  className="object-cover transition-transform duration-500 group-hover:scale-110"
+                />
               </div>
               <h3 className="text-2xl font-serif font-bold mb-3">
                 {report.title}

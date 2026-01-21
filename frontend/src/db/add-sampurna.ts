@@ -34,7 +34,7 @@ const addSampurnaKundali = async () => {
       price: "2999",
       originalPrice: "4999",
       discount: "40% OFF",
-      images: [],
+      images: ["/images/services/sampurna-kundali.jpg"],
       categoryId: servicesCategory.id,
       isLabCertified: false,
       rating: "5.0",

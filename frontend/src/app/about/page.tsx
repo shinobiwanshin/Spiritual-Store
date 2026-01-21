@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
@@ -44,9 +45,12 @@ export default function AboutPage() {
       <section className="py-16 px-6">
         <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 items-center">
           <div className="relative aspect-square rounded-3xl overflow-hidden bg-primary/5 flex items-center justify-center">
-            <span className="material-symbols-outlined text-9xl text-primary/20">
-              temple_hindu
-            </span>
+            <Image
+              src="/images/about-hero.jpg"
+              alt="Vedic Astrology"
+              fill
+              className="object-cover"
+            />
           </div>
           <div className="space-y-6">
             <h2 className="text-3xl font-serif font-bold">Our Mission</h2>
