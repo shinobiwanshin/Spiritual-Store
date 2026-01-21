@@ -3,6 +3,9 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { rashiReports } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
+import dns from "node:dns";
+import { JSDOM } from "jsdom";
+import createDOMPurify from "dompurify";
 
 const ASTROLOGY_API_BASE = "https://json.freeastrologyapi.com";
 const GEOCODING_API = "https://nominatim.openstreetmap.org/search";
@@ -171,6 +174,135 @@ function getTimezoneOffset(longitude: number, displayName: string): number {
   return Math.round((longitude / 15) * 2) / 2;
 }
 
+// Helper to securely fetch SVG content
+export async function fetchSvgContent(
+  url: string | null,
+): Promise<string | null> {
+  if (!url) return null;
+
+  // 1. URL Validation (Basic SSRF protection + DNS Check)
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(url);
+    if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+      console.warn("Skipping non-http URL for SVG:", url);
+      return url; // Return original URL if invalid protocol
+    }
+
+    // Hostname validation
+    const hostname = parsedUrl.hostname;
+    if (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "[::1]" ||
+      hostname === "169.254.169.254"
+    ) {
+      console.warn("Blocked potentially dangerous hostname:", hostname);
+      return url;
+    }
+
+    // DNS Resolution Check
+    const addresses = await dns.promises.resolve(hostname);
+    const blockedRanges = [
+      /^127\./, // 127.0.0.0/8
+      /^10\./, // 10.0.0.0/8
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./, // 172.16.0.0/12
+      /^192\.168\./, // 192.168.0.0/16
+      /^169\.254\./, // 169.254.0.0/16
+      /^fc00:/, // Unique Local
+      /^fe80:/, // Link Local
+      /^::1$/, // Loopback
+    ];
+
+    for (const ip of addresses) {
+      if (blockedRanges.some((regex) => regex.test(ip))) {
+        console.warn("Blocked private IP address:", ip);
+        return url;
+      }
+    }
+  } catch {
+    return url;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        Accept: "image/svg+xml, */*",
+      },
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      console.warn(`Failed to fetch SVG from ${url}: ${response.status}`);
+      return url; // Fallback to URL
+    }
+
+    const contentType = response.headers.get("content-type");
+    if (
+      contentType &&
+      !contentType.includes("svg") &&
+      !contentType.includes("xml")
+    ) {
+      console.warn(`Invalid content type at ${url}: ${contentType}`);
+      return url;
+    }
+
+    // 2. Size Limit and Streaming (MAX_SIZE 100KB)
+    const MAX_SIZE = 100 * 1024;
+    const bodyFn = response.body;
+
+    if (!bodyFn) {
+      // Fallback if no body stream
+      console.warn("No response body stream available");
+      return url;
+    }
+
+    const reader = bodyFn.getReader();
+    let receivedLength = 0;
+    const chunks: Uint8Array[] = [];
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      receivedLength += value.length;
+      if (receivedLength > MAX_SIZE) {
+        console.warn(`SVG too large from ${url}: Exceeded ${MAX_SIZE} bytes`);
+        reader.cancel();
+        return url;
+      }
+      chunks.push(value);
+    }
+
+    // Combine chunks
+    const chunksAll = new Uint8Array(receivedLength);
+    let position = 0;
+    for (const chunk of chunks) {
+      chunksAll.set(chunk, position);
+      position += chunk.length;
+    }
+
+    const text = new TextDecoder("utf-8").decode(chunksAll);
+
+    // 4. Sanitization using DOMPurify with JSDOM
+    const window = new JSDOM("").window;
+    const purify = createDOMPurify(window as any);
+
+    // Sanitize specifically for SVG
+    const clean = purify.sanitize(text, { USE_PROFILES: { svg: true } });
+
+    return clean;
+  } catch (error) {
+    console.warn(`Error fetching SVG content from ${url}:`, error);
+    return url;
+  }
+}
+
 // GET - Fetch user's saved rashi report
 export async function GET() {
   try {
@@ -300,83 +432,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Helper to securely fetch SVG content
-    async function fetchSvgContent(url: string | null): Promise<string | null> {
-      if (!url) return null;
-
-      // 1. URL Validation (Basic SSRF protection)
-      try {
-        const parsedUrl = new URL(url);
-        if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
-          console.warn("Skipping non-http URL for SVG:", url);
-          return url; // Return original URL if invalid protocol
-        }
-        // Disallow strictly internal IPs if needed (omitted for brevity, but can be added)
-      } catch {
-        return url;
-      }
-
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
-
-        const response = await fetch(url, {
-          signal: controller.signal,
-          headers: {
-            Accept: "image/svg+xml, */*",
-          },
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          console.warn(`Failed to fetch SVG from ${url}: ${response.status}`);
-          return url; // Fallback to URL
-        }
-
-        const contentType = response.headers.get("content-type");
-        if (
-          contentType &&
-          !contentType.includes("svg") &&
-          !contentType.includes("xml")
-        ) {
-          console.warn(`Invalid content type at ${url}: ${contentType}`);
-          return url;
-        }
-
-        // 2. Size Limit (e.g., 100KB)
-        const MAX_SIZE = 100 * 1024;
-        const size = Number(response.headers.get("content-length"));
-        if (size > MAX_SIZE) {
-          console.warn(`SVG too large from ${url}: ${size} bytes`);
-          return url;
-        }
-
-        const text = await response.text();
-
-        // 3. Post-fetch size check
-        if (text.length > MAX_SIZE) {
-          console.warn(`SVG body too large from ${url}`);
-          return url;
-        }
-
-        // 4. Basic content check
-        if (!text.trim().includes("<svg")) {
-          return url;
-        }
-
-        return text;
-      } catch (error) {
-        console.warn(`Error fetching SVG content from ${url}:`, error);
-        return url;
-      }
-    }
-
     const chartData = await chartResponse.json();
-    let rasiChartUrl = chartData.output || chartData;
+    let rasiChart = chartData.output || chartData;
 
     // Securely fetch Rasi chart SVG
-    rasiChartUrl = await fetchSvgContent(rasiChartUrl);
+    rasiChart = await fetchSvgContent(rasiChart);
 
     // Fetch planetary positions
     const planetsResponse = await fetch(`${ASTROLOGY_API_BASE}/planets`, {
@@ -448,7 +508,7 @@ export async function POST(request: NextRequest) {
           timezone: String(timezone),
           moonSign,
           nakshatra,
-          rasiChartUrl: typeof rasiChartUrl === "string" ? rasiChartUrl : null,
+          rasiChartUrl: typeof rasiChart === "string" ? rasiChart : null,
           navamsaChartUrl:
             typeof navamsaChartUrl === "string" ? navamsaChartUrl : null,
           planetsData,
@@ -477,7 +537,7 @@ export async function POST(request: NextRequest) {
         seconds,
       },
       charts: {
-        rasi: rasiChartUrl,
+        rasi: rasiChart,
         navamsa: navamsaChartUrl,
       },
       planets: planetsData,

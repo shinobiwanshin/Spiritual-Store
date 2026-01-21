@@ -3,6 +3,19 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
 
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "About Us | AstraSpiritual",
+  description:
+    "Learn about AstraSpiritual's mission to bridge Vedic wisdom with modern technology for accurate astrological guidance.",
+};
+
+const METRICS = [
+  { value: "5000+", label: "Kundalis Generated" },
+  { value: "100+", label: "Expert Consultations" },
+];
+
 export default function AboutPage() {
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -45,18 +58,16 @@ export default function AboutPage() {
               and clarity.
             </p>
             <div className="grid grid-cols-2 gap-6 pt-4">
-              <div>
-                <h3 className="text-2xl font-bold text-primary mb-2">5000+</h3>
-                <p className="text-sm text-muted-foreground">
-                  Kundalis Generated
-                </p>
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold text-primary mb-2">100+</h3>
-                <p className="text-sm text-muted-foreground">
-                  Expert Consultations
-                </p>
-              </div>
+              {METRICS.map((metric) => (
+                <div key={metric.label}>
+                  <span className="block text-2xl font-bold text-primary mb-2">
+                    {metric.value}
+                  </span>
+                  <p className="text-sm text-muted-foreground">
+                    {metric.label}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         </div>

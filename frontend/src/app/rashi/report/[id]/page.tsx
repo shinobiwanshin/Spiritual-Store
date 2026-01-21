@@ -54,9 +54,18 @@ interface FullReport {
 const ChartRenderer = ({ data, alt }: { data: string; alt: string }) => {
   const [imgError, setImgError] = useState(false);
 
+  // Robust SVG detection
+  const isSvgContent = (str: string) => {
+    const trimmed = str.trim();
+    return (
+      trimmed.startsWith("<svg") ||
+      /^(<\?xml|<!DOCTYPE)[\s\S]*<svg/i.test(trimmed)
+    );
+  };
+
   if (!data) return <div className="p-4 text-red-500">No Data</div>;
 
-  if (data.trim().startsWith("<svg")) {
+  if (isSvgContent(data)) {
     const sanitized = DOMPurify.sanitize(data, {
       USE_PROFILES: { svg: true },
     });
@@ -123,7 +132,16 @@ export default function ReportPage() {
 
   const downloadChart = async (chartUrl: string, filename: string) => {
     try {
-      if (chartUrl.trim().startsWith("<svg")) {
+      // Robust SVG detection
+      const isSvgContent = (str: string) => {
+        const trimmed = str.trim();
+        return (
+          trimmed.startsWith("<svg") ||
+          /^(<\?xml|<!DOCTYPE)[\s\S]*<svg/i.test(trimmed)
+        );
+      };
+
+      if (isSvgContent(chartUrl)) {
         const blob = new Blob([chartUrl], { type: "image/svg+xml" });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");

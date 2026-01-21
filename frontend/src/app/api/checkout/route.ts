@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import Razorpay from "razorpay";
+import { paymentProtection } from "@/lib/arcjet";
 
 // Lazy initialization to avoid build-time errors when env vars are not set
 let razorpay: Razorpay | null = null;
@@ -20,6 +21,39 @@ function getRazorpay(): Razorpay | null {
 
 export async function POST(request: NextRequest) {
   try {
+    // =========================================================================
+    // ARCJET SECURITY CHECK
+    // Protects against: bots, rate limit abuse, injection attacks
+    // =========================================================================
+    const decision = await paymentProtection.protect(request, { requested: 1 });
+
+    if (decision.isDenied()) {
+      // Log for monitoring (visible in Arcjet dashboard)
+      console.warn("Arcjet blocked checkout request:", {
+        reason: decision.reason,
+        ip: request.headers.get("x-forwarded-for") || "unknown",
+      });
+
+      if (decision.reason.isRateLimit()) {
+        return NextResponse.json(
+          { error: "Too many requests. Please try again later." },
+          { status: 429 },
+        );
+      }
+
+      if (decision.reason.isBot()) {
+        return NextResponse.json(
+          { error: "Automated requests not allowed." },
+          { status: 403 },
+        );
+      }
+
+      return NextResponse.json(
+        { error: "Request blocked for security reasons." },
+        { status: 403 },
+      );
+    }
+
     // Require authentication to create checkout orders
     const { userId } = await auth();
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, products, categories } from "@/db";
-import { eq, ilike, or, and, sql } from "drizzle-orm";
+import { eq, ne, ilike, or, and, sql } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,7 +41,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Remove Legal Problems Consultation completely
-    conditions.push(sql`${products.slug} != 'legal-problems-consultation'`);
+    const LEGAL_PROBLEMS_CONSULTATION = "legal-problems-consultation";
+    conditions.push(ne(products.slug, LEGAL_PROBLEMS_CONSULTATION));
 
     if (zodiac) {
       // Create Postgres array literal string '{A,B,C}'

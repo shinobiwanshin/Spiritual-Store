@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
@@ -164,24 +164,29 @@ export default function ReportDetailPage() {
   };
 
   // Check for pending cart item on mount
-  useState(() => {
+
+  useEffect(() => {
     if (isSignedIn) {
       const pendingItem = sessionStorage.getItem("pendingCartItem");
       if (pendingItem) {
-        const item = JSON.parse(pendingItem);
-        if (item.id === slug) {
-          addItem({
-            id: item.id,
-            title: item.title,
-            price: item.price,
-            image: item.image,
-          });
-          toast.success(`${item.title} added to cart!`);
-          sessionStorage.removeItem("pendingCartItem");
+        try {
+          const item = JSON.parse(pendingItem);
+          if (item.id === slug) {
+            addItem({
+              id: item.id,
+              title: item.title,
+              price: item.price,
+              image: item.image,
+            });
+            toast.success(`${item.title} added to cart!`);
+            sessionStorage.removeItem("pendingCartItem");
+          }
+        } catch (e) {
+          console.error("Failed to parse pending item", e);
         }
       }
     }
-  });
+  }, [isSignedIn, slug, addItem]);
 
   return (
     <main className="min-h-screen bg-background">
@@ -190,7 +195,7 @@ export default function ReportDetailPage() {
       {/* Hero Section */}
       <section className="pt-32 pb-20 relative overflow-hidden">
         <div
-          className={`absolute inset-0 bg-gradient-to-br from-background via-background ${report.color.split(" ")[1].replace("to-", "to-")}/10`}
+          className={`absolute inset-0 bg-gradient-to-br from-background via-background ${report.color.split(" ")[1]}/10`}
         ></div>
         <div className="absolute top-20 left-10 w-96 h-96 bg-primary/5 rounded-full blur-3xl"></div>
         <div className="max-w-7xl mx-auto px-6 relative z-10">
