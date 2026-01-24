@@ -30,20 +30,8 @@ export default function InternationalSupport() {
           </p>
         </div>
 
-        {/* Action */}
-        <div>
-          <Button
-            asChild
-            variant="outline"
-            className="border-indigo-500/50 text-indigo-100 hover:bg-indigo-900/50 hover:text-white"
-          >
-            <a href="/contact">
-              <span className="material-symbols-outlined mr-2 text-lg">
-                support_agent
-              </span>
-              Contact Support
-            </a>
-          </Button>
+        <div className="text-indigo-100 font-medium">
+          Contact us on WhatsApp on 91********* or reach us on nnnnnnn@gmail.com
         </div>
       </div>
     </div>

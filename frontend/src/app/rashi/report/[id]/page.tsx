@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import DOMPurify from "dompurify";
+import { printKundaliReport } from "@/lib/kundali-pdf";
 
 interface PlanetData {
   name: string;
@@ -178,8 +179,16 @@ export default function ReportPage() {
     }
   };
 
-  const printReport = () => {
-    window.print();
+  const handlePrintReport = () => {
+    if (!report) return;
+    printKundaliReport({
+      id: report.id,
+      name: report.name,
+      birthDetails: report.birthDetails,
+      kundali: report.kundali,
+      recommendations: report.recommendations,
+      createdAt: report.createdAt,
+    });
   };
 
   const shareReport = async () => {
@@ -262,7 +271,7 @@ export default function ReportPage() {
               <span className="material-symbols-outlined text-sm">share</span>
               Share
             </Button>
-            <Button onClick={printReport} className="gap-2">
+            <Button onClick={handlePrintReport} className="gap-2">
               <span className="material-symbols-outlined text-sm">
                 download
               </span>

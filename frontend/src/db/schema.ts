@@ -487,6 +487,84 @@ export const rashiReportsRelations = relations(rashiReports, ({ one }) => ({
 }));
 
 // ============================================
+// ASTROLOGY REPORTS (Generated prediction reports)
+// ============================================
+export interface AstrologyReportBirthData {
+  dob: string;
+  sunSign: string;
+  moonSign: string;
+  ascendant: string;
+  planetaryHouses: Record<string, number>;
+  planetarySigns: Record<string, string>;
+  currentDasha: string;
+  upcomingDashas?: string[];
+}
+
+export interface AstrologyReportData {
+  duration: string;
+  years: number[];
+  reports: Array<{
+    year: number;
+    theme: string;
+    overview: string;
+    career: string;
+    finance: string;
+    health: string;
+    family: string;
+    love: string;
+    advice: string;
+  }>;
+  phases?: Array<{
+    name: string;
+    years: number[];
+    summary: string;
+  }>;
+  generatedAt: string;
+  disclaimer: string;
+}
+
+export const astrologyReports = pgTable(
+  "astrology_reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    orderId: uuid("order_id").references(() => orders.id, {
+      onDelete: "set null",
+    }),
+    reportType: text("report_type", {
+      enum: ["1-year", "3-year", "5-year"],
+    }).notNull(),
+    birthData: jsonb("birth_data").$type<AstrologyReportBirthData>().notNull(),
+    reportData: jsonb("report_data").$type<AstrologyReportData>().notNull(),
+    cacheKey: text("cache_key").unique().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("idx_astrology_reports_user").on(table.userId),
+    index("idx_astrology_reports_cache_key").on(table.cacheKey),
+  ],
+);
+
+export const astrologyReportsRelations = relations(
+  astrologyReports,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [astrologyReports.userId],
+      references: [users.id],
+    }),
+    order: one(orders, {
+      fields: [astrologyReports.orderId],
+      references: [orders.id],
+    }),
+  }),
+);
+
+// ============================================
 // USERS
 // ============================================
 export const users = pgTable("users", {
@@ -513,6 +591,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   reviews: many(reviews),
   wishlistItems: many(wishlistItems),
   rashiReports: many(rashiReports),
+  astrologyReports: many(astrologyReports),
 }));
 
 // ============================================
@@ -543,3 +622,5 @@ export type NewCoupon = typeof coupons.$inferInsert;
 export type NewWishlistItem = typeof wishlistItems.$inferInsert;
 export type NewRashiReport = typeof rashiReports.$inferInsert;
 export type NewUser = typeof users.$inferInsert;
+export type AstrologyReportRecord = typeof astrologyReports.$inferSelect;
+export type NewAstrologyReport = typeof astrologyReports.$inferInsert;
