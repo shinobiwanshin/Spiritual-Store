@@ -292,7 +292,7 @@ export async function fetchSvgContent(
     // 4. Sanitization using dompurify + linkedom
     // Create a mock window for DOMPurify using linkedom
     const { window } = parseHTML("<!DOCTYPE html><html><body></body></html>");
-    const purify = createDOMPurify(window as unknown as Window);
+    const purify = createDOMPurify(window as unknown as any);
 
     // Sanitize specifically for SVG
     const clean = purify.sanitize(text, { USE_PROFILES: { svg: true } });
