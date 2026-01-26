@@ -4,8 +4,7 @@ import { db } from "@/db";
 import { rashiReports } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import dns from "node:dns";
-import { JSDOM } from "jsdom";
-import createDOMPurify from "dompurify";
+import DOMPurify from "isomorphic-dompurify";
 
 const ASTROLOGY_API_BASE = "https://json.freeastrologyapi.com";
 const GEOCODING_API = "https://nominatim.openstreetmap.org/search";
@@ -289,12 +288,9 @@ export async function fetchSvgContent(
 
     const text = new TextDecoder("utf-8").decode(chunksAll);
 
-    // 4. Sanitization using DOMPurify with JSDOM
-    const window = new JSDOM("").window;
-    const purify = createDOMPurify(window as any);
-
+    // 4. Sanitization using isomorphic-dompurify
     // Sanitize specifically for SVG
-    const clean = purify.sanitize(text, { USE_PROFILES: { svg: true } });
+    const clean = DOMPurify.sanitize(text, { USE_PROFILES: { svg: true } });
 
     return clean;
   } catch (error) {
