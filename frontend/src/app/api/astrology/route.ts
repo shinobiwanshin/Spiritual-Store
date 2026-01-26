@@ -460,12 +460,21 @@ export async function POST(request: NextRequest) {
       // Transform the raw data
       planetsData = transformPlanets(rawPlanets);
 
+      if (planetsData.length === 0) {
+        console.error(
+          "Planets transformation resulted in empty array. Raw data:",
+          JSON.stringify(rawPlanets),
+        );
+      }
+
       // Extract moon data
       const moonData = planetsData.find((p) => p.name === "Moon");
       if (moonData) {
         moonSign = moonData.sign;
         nakshatra = moonData.nakshatra;
       }
+    } else {
+      console.error("Planets API failed:", await planetsResponse.text());
     }
 
     // Fetch Navamsa chart
