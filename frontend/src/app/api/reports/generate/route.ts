@@ -10,8 +10,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
-import { astrologyReports } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { astrologyReports, reportEntitlements } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 import {
   generateReport,
   createProfile,
@@ -108,9 +108,12 @@ export async function POST(request: NextRequest) {
     // Generate cache key for deterministic lookup
     const cacheKey = generateCacheKey(profile, body.duration);
 
-    // Check if report already exists in database
+    // Per-user cache: same birth chart can exist for different paying users
     const existingReport = await db.query.astrologyReports.findFirst({
-      where: eq(astrologyReports.cacheKey, cacheKey),
+      where: and(
+        eq(astrologyReports.cacheKey, cacheKey),
+        eq(astrologyReports.userId, userId),
+      ),
     });
 
     if (existingReport) {
@@ -123,20 +126,37 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Generate the report (deterministic)
-    const report = generateReport(profile, body.duration);
-
-    // Store in database
     const reportType = `${body.duration}-year` as
       | "1-year"
       | "3-year"
       | "5-year";
 
+    const entitlement = await db.query.reportEntitlements.findFirst({
+      where: and(
+        eq(reportEntitlements.userId, userId),
+        eq(reportEntitlements.reportType, reportType),
+      ),
+    });
+
+    if (!entitlement) {
+      return NextResponse.json(
+        {
+          error: "Purchase this report to generate it",
+          code: "PAYMENT_REQUIRED",
+        },
+        { status: 402 },
+      );
+    }
+
+    // Generate the report (deterministic)
+    const report = generateReport(profile, body.duration);
+
+    // Store in database
     const [savedReport] = await db
       .insert(astrologyReports)
       .values({
         userId,
-        orderId: body.orderId,
+        orderId: body.orderId ?? entitlement.orderId ?? undefined,
         reportType,
         birthData: {
           dob: profile.dob,

@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 
 interface Order {
   id: string;
-  razorpay_order_id: string;
+  razorpay_order_id: string | null;
+  cashfree_order_id?: string | null;
   status: string;
   total: number;
   items: Array<{
@@ -43,6 +44,7 @@ function OrdersContent() {
             (order: Record<string, unknown>) => ({
               id: order.id,
               razorpay_order_id: order.razorpayOrderId,
+              cashfree_order_id: order.cashfreeOrderId,
               status: order.status,
               total: parseFloat(order.total as string),
               items: order.items,
@@ -119,6 +121,12 @@ function OrdersContent() {
                     <p className="text-sm text-muted-foreground">
                       Order #{order.id.slice(0, 8).toUpperCase()}
                     </p>
+                    {(order.cashfree_order_id || order.razorpay_order_id) && (
+                      <p className="text-xs text-muted-foreground font-mono truncate max-w-[220px]">
+                        Ref:{" "}
+                        {(order.cashfree_order_id || order.razorpay_order_id) as string}
+                      </p>
+                    )}
                     <p className="text-xs text-muted-foreground">
                       {new Date(order.created_at).toLocaleDateString("en-IN", {
                         day: "numeric",

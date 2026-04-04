@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import Image from "next/image";
-import { notFound, useParams } from "next/navigation";
+import { notFound, useParams, useSearchParams, useRouter } from "next/navigation";
 import InternationalSupport from "@/components/InternationalSupport";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -11,7 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { useAuth, useClerk } from "@clerk/nextjs";
+import { useAuth, useClerk, useUser } from "@clerk/nextjs";
+import { priceForSlug, type ReportSlug } from "@/lib/report-pricing";
 import { toast } from "sonner";
 import {
   AstrologyReport,
@@ -85,11 +86,14 @@ const reportsData: Record<
   },
 };
 
-export default function ReportDetailPage() {
+function ReportDetailInner() {
   const params = useParams();
   const slug = params.slug as string;
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const { isSignedIn } = useAuth();
   const { openSignIn } = useClerk();
+  const { user } = useUser();
 
   const report = reportsData[slug];
 
@@ -120,20 +124,22 @@ export default function ReportDetailPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchingLocation, setSearchingLocation] = useState(false);
 
-  if (!report) {
-    return notFound();
-  }
+  const [entitled, setEntitled] = useState(false);
+  const [hasSavedReportAccess, setHasSavedReportAccess] = useState(false);
+  const [accessLoading, setAccessLoading] = useState(true);
+  const [payPhone, setPayPhone] = useState("");
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
-  // Check for cached report on mount
   useEffect(() => {
-    if (isSignedIn) {
-      checkCachedReport();
-    } else {
-      setLoadingCached(false);
+    const phone = user?.phoneNumbers?.[0]?.phoneNumber;
+    if (phone) {
+      const digits = phone.replace(/\D/g, "");
+      if (digits.length >= 10) setPayPhone(digits.slice(-10));
     }
-  }, [isSignedIn]);
+  }, [user]);
 
-  const checkCachedReport = async () => {
+  const checkCachedReport = useCallback(async () => {
+    if (!report) return;
     try {
       const response = await fetch("/api/reports/user");
       if (!response.ok) {
@@ -141,13 +147,11 @@ export default function ReportDetailPage() {
         return;
       }
       const data = await response.json();
-      // Find a report matching this duration
       const matchingReport = data.reports?.find(
         (r: { reportType: string }) =>
           r.reportType === `${report.duration}-year`,
       );
       if (matchingReport) {
-        // Fetch the full report
         const fullReportRes = await fetch(`/api/reports/${matchingReport.id}`);
         if (fullReportRes.ok) {
           const fullData = await fullReportRes.json();
@@ -161,7 +165,176 @@ export default function ReportDetailPage() {
     } finally {
       setLoadingCached(false);
     }
+  }, [report]);
+
+  useEffect(() => {
+    if (!isSignedIn) {
+      setAccessLoading(false);
+      setLoadingCached(false);
+      return;
+    }
+    if (!report) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const entRes = await fetch(
+          `/api/reports/entitlement?slug=${encodeURIComponent(slug)}`,
+        );
+        if (!entRes.ok) throw new Error();
+        const ent = await entRes.json();
+        if (cancelled) return;
+        setEntitled(Boolean(ent.entitled));
+        setHasSavedReportAccess(Boolean(ent.hasSavedReport));
+        if (ent.hasSavedReport) {
+          await checkCachedReport();
+        } else {
+          setLoadingCached(false);
+        }
+      } catch {
+        toast.error("Could not load report access");
+        setLoadingCached(false);
+      } finally {
+        if (!cancelled) setAccessLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isSignedIn, slug, report, checkCachedReport]);
+
+  useEffect(() => {
+    const cf = searchParams.get("cf");
+    const orderId = searchParams.get("order_id");
+    if (!cf || !orderId || !isSignedIn || !report) return;
+
+    let cancelled = false;
+    (async () => {
+      setPaymentLoading(true);
+      try {
+        const res = await fetch("/api/cashfree/verify-report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            cashfree_order_id: orderId,
+            slug,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(
+            (data as { error?: string }).error || "Verification failed",
+          );
+        }
+        if (!cancelled) {
+          setEntitled(true);
+          toast.success("Payment successful. You can generate your report.");
+          router.replace(`/reports/${slug}`);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          toast.error(
+            e instanceof Error ? e.message : "Could not verify payment",
+          );
+        }
+      } finally {
+        if (!cancelled) setPaymentLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, isSignedIn, slug, report, router]);
+
+  const loadCashfreeScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (
+        typeof window !== "undefined" &&
+        (window as unknown as { Cashfree?: unknown }).Cashfree
+      ) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
   };
+
+  const handleReportPayment = async () => {
+    if (!isSignedIn) {
+      openSignIn();
+      return;
+    }
+    if (!report) return;
+    const digits = payPhone.replace(/\D/g, "");
+    if (digits.length < 10) {
+      toast.error("Enter a valid 10-digit mobile number");
+      return;
+    }
+    setPaymentLoading(true);
+    try {
+      const res = await fetch("/api/cashfree/create-report-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug,
+          customerPhone: payPhone,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Could not start payment");
+      }
+      if (data.mock) {
+        const v = await fetch("/api/cashfree/verify-report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            cashfree_order_id: data.orderId,
+            slug,
+          }),
+        });
+        const vdata = await v.json();
+        if (!v.ok) throw new Error(vdata.error || "Verify failed");
+        setEntitled(true);
+        toast.success("Dev mode: access granted.");
+        return;
+      }
+      const loaded = await loadCashfreeScript();
+      const Cashfree = (
+        window as unknown as {
+          Cashfree: (opts: { mode: "sandbox" | "production" }) => {
+            checkout: (opts: {
+              paymentSessionId: string;
+              returnUrl?: string;
+            }) => Promise<void>;
+          };
+        }
+      ).Cashfree;
+      if (!loaded || !Cashfree) throw new Error("Payment SDK failed to load");
+      const mode =
+        process.env.NEXT_PUBLIC_CASHFREE_ENV === "production"
+          ? "production"
+          : "sandbox";
+      const cashfree = Cashfree({ mode });
+      const returnUrl = `${window.location.origin}/reports/${slug}?cf=1&order_id={order_id}`;
+      await cashfree.checkout({
+        paymentSessionId: data.paymentSessionId as string,
+        returnUrl,
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Payment failed");
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  if (!report) {
+    return notFound();
+  }
 
   // Location search
   const searchLocation = useCallback(async (query: string) => {
@@ -258,6 +431,11 @@ export default function ReportDetailPage() {
       });
 
       const data = await response.json();
+
+      if (response.status === 402) {
+        toast.error(data.error || "Please purchase this report first.");
+        return;
+      }
 
       if (!response.ok) {
         toast.error(data.error || "Failed to generate report");
@@ -510,22 +688,87 @@ export default function ReportDetailPage() {
         </section>
       )}
 
-      {/* Form Section */}
+      {/* Paywall / Form Section */}
       {!generatedReport && (
         <section className="py-16 px-6">
           <div className="max-w-2xl mx-auto">
-            <Card className="border-primary/10 shadow-2xl shadow-primary/5">
-              <CardContent className="p-8 space-y-6">
-                <div className="text-center mb-8">
-                  <h2 className="text-2xl font-serif font-bold mb-2">
-                    Generate Your Report
-                  </h2>
-                  <p className="text-muted-foreground text-sm">
-                    Enter your birth details for personalized predictions
-                  </p>
-                </div>
+            {(accessLoading || loadingCached) && (
+              <Card className="border-primary/10">
+                <CardContent className="p-12 flex justify-center">
+                  <span className="material-symbols-outlined animate-spin text-primary text-4xl">
+                    progress_activity
+                  </span>
+                </CardContent>
+              </Card>
+            )}
 
-                <form onSubmit={handleSubmit} className="space-y-5">
+            {!accessLoading &&
+              !loadingCached &&
+              isSignedIn &&
+              !entitled &&
+              !hasSavedReportAccess && (
+                <Card className="border-primary/20 shadow-2xl shadow-primary/5">
+                  <CardContent className="p-8 space-y-6">
+                    <div className="text-center space-y-2">
+                      <h2 className="text-2xl font-serif font-bold">
+                        Unlock this report
+                      </h2>
+                      <p className="text-muted-foreground text-sm">
+                        One-time purchase • Instant access after payment
+                      </p>
+                      <p className="text-3xl font-bold text-primary pt-2">
+                        ₹
+                        {priceForSlug(slug as ReportSlug).toLocaleString("en-IN")}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Mobile number (for payment) *</Label>
+                      <Input
+                        className="h-12"
+                        placeholder="10-digit mobile"
+                        inputMode="numeric"
+                        value={payPhone}
+                        onChange={(e) => setPayPhone(e.target.value)}
+                      />
+                    </div>
+                    <Button
+                      className={`w-full h-14 text-lg font-bold gap-2 bg-linear-to-r ${report.color}`}
+                      onClick={handleReportPayment}
+                      disabled={paymentLoading}
+                    >
+                      {paymentLoading ? (
+                        <span className="material-symbols-outlined animate-spin">
+                          progress_activity
+                        </span>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined">lock_open</span>
+                          Pay securely with Cashfree
+                        </>
+                      )}
+                    </Button>
+                    <p className="text-xs text-center text-muted-foreground">
+                      UPI, cards &amp; net banking via Cashfree Payments
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+            {!accessLoading &&
+              !loadingCached &&
+              (entitled || hasSavedReportAccess) && (
+                <Card className="border-primary/10 shadow-2xl shadow-primary/5">
+                  <CardContent className="p-8 space-y-6">
+                    <div className="text-center mb-8">
+                      <h2 className="text-2xl font-serif font-bold mb-2">
+                        Generate Your Report
+                      </h2>
+                      <p className="text-muted-foreground text-sm">
+                        Enter your birth details for personalized predictions
+                      </p>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="space-y-5">
                   {/* Full Name */}
                   <div className="space-y-2">
                     <Label className="text-sm font-bold">Full Name</Label>
@@ -664,9 +907,27 @@ export default function ReportDetailPage() {
                       </>
                     )}
                   </Button>
-                </form>
-              </CardContent>
-            </Card>
+                    </form>
+                  </CardContent>
+                </Card>
+              )}
+
+            {!isSignedIn && !accessLoading && !loadingCached && (
+              <Card className="border-primary/10 shadow-2xl shadow-primary/5">
+                <CardContent className="p-8 space-y-4 text-center">
+                  <h2 className="text-xl font-serif font-bold">
+                    Sign in to continue
+                  </h2>
+                  <p className="text-muted-foreground text-sm">
+                    Create an account or sign in to purchase and generate your
+                    report.
+                  </p>
+                  <Button onClick={() => openSignIn()} className="gap-2">
+                    Sign in
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </section>
       )}
@@ -703,5 +964,21 @@ export default function ReportDetailPage() {
 
       <Footer />
     </main>
+  );
+}
+
+export default function ReportDetailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <span className="material-symbols-outlined animate-spin text-primary text-4xl">
+            progress_activity
+          </span>
+        </div>
+      }
+    >
+      <ReportDetailInner />
+    </Suspense>
   );
 }

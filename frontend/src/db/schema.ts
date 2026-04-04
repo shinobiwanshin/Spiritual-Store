@@ -186,6 +186,14 @@ export const orders = pgTable(
     userId: text("user_id").notNull(),
     razorpayOrderId: text("razorpay_order_id").unique(),
     razorpayPaymentId: text("razorpay_payment_id"),
+    /** Cashfree PG order id (string returned by Cashfree, e.g. order_xxx) */
+    cashfreeOrderId: text("cashfree_order_id").unique(),
+    cashfreePaymentId: text("cashfree_payment_id"),
+    orderKind: text("order_kind", {
+      enum: ["product", "report"],
+    })
+      .default("product")
+      .notNull(),
     status: text("status", {
       enum: [
         "pending",
@@ -232,9 +240,51 @@ export const orders = pgTable(
   ],
 );
 
+// ============================================
+// REPORT ENTITLEMENTS (paid access to astrology reports)
+// ============================================
+export const reportEntitlements = pgTable(
+  "report_entitlements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    reportType: text("report_type", {
+      enum: ["1-year", "3-year", "5-year"],
+    }).notNull(),
+    orderId: uuid("order_id").references(() => orders.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("idx_report_entitlements_user").on(table.userId),
+    unique("unique_user_report_type_entitlement").on(
+      table.userId,
+      table.reportType,
+    ),
+  ],
+);
+
+export const reportEntitlementsRelations = relations(
+  reportEntitlements,
+  ({ one }) => ({
+    order: one(orders, {
+      fields: [reportEntitlements.orderId],
+      references: [orders.id],
+    }),
+    user: one(users, {
+      fields: [reportEntitlements.userId],
+      references: [users.id],
+    }),
+  }),
+);
+
 export const ordersRelations = relations(orders, ({ one, many }) => ({
   orderItems: many(orderItems),
   payments: many(payments),
+  reportEntitlements: many(reportEntitlements),
   user: one(users, {
     fields: [orders.userId],
     references: [users.id],
@@ -300,6 +350,8 @@ export const payments = pgTable(
       .notNull(),
     razorpayPaymentId: text("razorpay_payment_id").unique(),
     razorpayOrderId: text("razorpay_order_id"),
+    cashfreePaymentId: text("cashfree_payment_id").unique(),
+    cashfreeOrderId: text("cashfree_order_id"),
     amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
     currency: text("currency").default("INR"),
     status: text("status", {
@@ -536,7 +588,7 @@ export const astrologyReports = pgTable(
     }).notNull(),
     birthData: jsonb("birth_data").$type<AstrologyReportBirthData>().notNull(),
     reportData: jsonb("report_data").$type<AstrologyReportData>().notNull(),
-    cacheKey: text("cache_key").unique().notNull(),
+    cacheKey: text("cache_key").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -547,6 +599,7 @@ export const astrologyReports = pgTable(
   (table) => [
     index("idx_astrology_reports_user").on(table.userId),
     index("idx_astrology_reports_cache_key").on(table.cacheKey),
+    unique("unique_user_astrology_cache").on(table.userId, table.cacheKey),
   ],
 );
 
@@ -592,6 +645,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   wishlistItems: many(wishlistItems),
   rashiReports: many(rashiReports),
   astrologyReports: many(astrologyReports),
+  reportEntitlements: many(reportEntitlements),
 }));
 
 // ============================================
@@ -624,3 +678,5 @@ export type NewRashiReport = typeof rashiReports.$inferInsert;
 export type NewUser = typeof users.$inferInsert;
 export type AstrologyReportRecord = typeof astrologyReports.$inferSelect;
 export type NewAstrologyReport = typeof astrologyReports.$inferInsert;
+export type ReportEntitlement = typeof reportEntitlements.$inferSelect;
+export type NewReportEntitlement = typeof reportEntitlements.$inferInsert;
