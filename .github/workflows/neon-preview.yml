@@ -1,0 +1,111 @@
+name: Create/Delete Neon Branch for Pull Request
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - closed
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 1. Resolve the short branch name once so all jobs can share it
+  # ─────────────────────────────────────────────────────────────────────────────
+  setup:
+    name: Setup
+    outputs:
+      branch: ${{ steps.branch_name.outputs.current_branch }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get branch name
+        id: branch_name
+        uses: tj-actions/branch-names@v8
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 2. On open / reopen / push → create an isolated Neon branch + run migrations
+  # ─────────────────────────────────────────────────────────────────────────────
+  create_neon_branch:
+    name: Create Neon Branch
+    needs: setup
+    if: |
+      github.event_name == 'pull_request' && (
+        github.event.action == 'opened'   ||
+        github.event.action == 'reopened' ||
+        github.event.action == 'synchronize'
+      )
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: write   # needed to post schema-diff comments
+
+    outputs:
+      db_url:             ${{ steps.create_neon_branch.outputs.db_url }}
+      db_url_with_pooler: ${{ steps.create_neon_branch.outputs.db_url_with_pooler }}
+
+    steps:
+      # ── Compute expiry (2 weeks) ──────────────────────────────────────────
+      - name: Compute branch expiration date (14 days)
+        id: expiry
+        run: echo "EXPIRES_AT=$(date -u --date '+14 days' +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
+
+      # ── Create the Neon preview branch ───────────────────────────────────
+      - name: Create Neon Branch
+        id: create_neon_branch
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch_name: preview/pr-${{ github.event.number }}-${{ needs.setup.outputs.branch }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          expires_at: ${{ env.EXPIRES_AT }}
+
+      # ── Check out the source so we can run migrations ────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Install bun ──────────────────────────────────────────────────────
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # ── Install dependencies (uses bun.lock) ─────────────────────────────
+      - name: Install dependencies
+        working-directory: frontend
+        run: bun install --frozen-lockfile
+
+      # ── Run Drizzle migrations against the preview branch ────────────────
+      - name: Run DB migrations
+        working-directory: frontend
+        env:
+          DATABASE_URL: ${{ steps.create_neon_branch.outputs.db_url_with_pooler }}
+        run: bun run db:migrate
+
+      # ── (Optional) Post schema diff as a PR comment ───────────────────────
+      # Uncomment once neondatabase/schema-diff-action is stable for your setup.
+      # - name: Post Schema Diff Comment to PR
+      #   uses: neondatabase/schema-diff-action@v1
+      #   with:
+      #     project_id: ${{ vars.NEON_PROJECT_ID }}
+      #     compare_branch: preview/pr-${{ github.event.number }}-${{ needs.setup.outputs.branch }}
+      #     api_key: ${{ secrets.NEON_API_KEY }}
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 3. On close / merge → clean up the Neon branch to avoid orphaned branches
+  # ─────────────────────────────────────────────────────────────────────────────
+  delete_neon_branch:
+    name: Delete Neon Branch
+    needs: setup
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete Neon Branch
+        uses: neondatabase/delete-branch-action@v3
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch: preview/pr-${{ github.event.number }}-${{ needs.setup.outputs.branch }}
+          api_key: ${{ secrets.NEON_API_KEY }}

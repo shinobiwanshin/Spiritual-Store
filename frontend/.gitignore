@@ -1,5 +1,24 @@
-# clerk configuration (can include secrets)
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# Environment variables — NEVER commit these
+.env
+.env.local
+.env.*.local
+
+# Clerk configuration (may include secrets)
 /.clerk/
-/.env.local
-# Sentry Config File
+
+# Sentry build plugin config
 .env.sentry-build-plugin
+
+# npm lockfile — project uses bun (bun.lock is committed instead)
+package-lock.json
+
+# OS artefacts
+.DS_Store
+Thumbs.db
