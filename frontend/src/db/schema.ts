@@ -237,6 +237,10 @@ export const orders = pgTable(
       "orders_amounts_positive",
       sql`${table.subtotal} >= 0 AND ${table.shippingCost} >= 0 AND ${table.total} >= 0 AND ${table.discount} >= 0`,
     ),
+    check(
+      "orders_order_kind_check",
+      sql`${table.orderKind} IN ('product', 'report')`
+    ),
   ],
 );
 
@@ -263,6 +267,10 @@ export const reportEntitlements = pgTable(
     unique("unique_user_report_type_entitlement").on(
       table.userId,
       table.reportType,
+    ),
+    check(
+      "report_entitlements_report_type_check",
+      sql`${table.reportType} IN ('1-year', '3-year', '5-year')`
     ),
   ],
 );
@@ -600,6 +608,10 @@ export const astrologyReports = pgTable(
     index("idx_astrology_reports_user").on(table.userId),
     index("idx_astrology_reports_cache_key").on(table.cacheKey),
     unique("unique_user_astrology_cache").on(table.userId, table.cacheKey),
+    check(
+      "astrology_reports_report_type_check",
+      sql`${table.reportType} IN ('1-year', '3-year', '5-year')`
+    ),
   ],
 );
 

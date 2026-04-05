@@ -4,10 +4,7 @@ import { eq, and } from "drizzle-orm";
 import { db, orders, reportEntitlements, payments } from "@/db";
 import { paymentProtection } from "@/lib/arcjet";
 import {
-  amountsMatch,
-  fetchCashfreeOrder,
-  fetchFirstCashfreePaymentId,
-  isCashfreeOrderPaid,
+  verifyCashfreePayment,
 } from "@/lib/cashfree";
 import {
   isReportSlug,
@@ -97,41 +94,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let cfPaymentId: string | null = null;
-
-    if (
-      process.env.NODE_ENV !== "production" &&
-      cashfree_order_id.startsWith("mock_cf_")
-    ) {
-      cfPaymentId = `mock_pay_${cashfree_order_id.slice(-24)}`;
-    } else {
-      const cfOrder = await fetchCashfreeOrder(cashfree_order_id);
-      const custId = cfOrder.customer_details as
-        | { customer_id?: string }
-        | undefined;
-      if (custId?.customer_id !== userId) {
-        return NextResponse.json(
-          { error: "Order does not belong to this account" },
-          { status: 403 },
-        );
-      }
-      const amt = cfOrder.order_amount;
-      if (typeof amt !== "number" || !amountsMatch(amt, expected)) {
-        return NextResponse.json(
-          { error: "Paid amount does not match report price" },
-          { status: 400 },
-        );
-      }
-      if (!isCashfreeOrderPaid(cfOrder)) {
-        return NextResponse.json(
-          { error: "Payment is not completed" },
-          { status: 400 },
-        );
-      }
-      cfPaymentId =
-        (await fetchFirstCashfreePaymentId(cashfree_order_id)) ??
-        cashfree_order_id;
+    let paymentResult;
+    try {
+      paymentResult = await verifyCashfreePayment(cashfree_order_id, expected, userId);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Payment verification failed";
+      const status = msg.includes("account") ? 403 : 400;
+      return NextResponse.json({ error: msg }, { status });
     }
+    const { cfPaymentId } = paymentResult;
 
     const itemsSnapshot = [
       {
@@ -143,48 +114,52 @@ export async function POST(request: NextRequest) {
       },
     ];
 
-    const [order] = await db
-      .insert(orders)
-      .values({
+    const orderId = await db.transaction(async (tx) => {
+      const [order] = await tx
+        .insert(orders)
+        .values({
+          userId,
+          cashfreeOrderId: cashfree_order_id,
+          cashfreePaymentId: cfPaymentId || undefined,
+          orderKind: "report",
+          status: "paid",
+          subtotal: expected.toString(),
+          total: expected.toString(),
+          shippingAddress: {
+            name: "Digital delivery",
+            line1: "N/A",
+            city: "N/A",
+            state: "N/A",
+            pincode: "000000",
+            phone: "0000000000",
+          },
+          itemsSnapshot,
+          notes: `report:${slug}`,
+        })
+        .returning();
+
+      await tx.insert(reportEntitlements).values({
         userId,
+        reportType,
+        orderId: order.id,
+      });
+
+      await tx.insert(payments).values({
+        orderId: order.id,
+        cashfreePaymentId: cfPaymentId || cashfree_order_id,
         cashfreeOrderId: cashfree_order_id,
-        cashfreePaymentId: cfPaymentId || undefined,
-        orderKind: "report",
-        status: "paid",
-        subtotal: expected.toString(),
-        total: expected.toString(),
-        shippingAddress: {
-          name: "Digital delivery",
-          line1: "N/A",
-          city: "N/A",
-          state: "N/A",
-          pincode: "000000",
-          phone: "0000000000",
-        },
-        itemsSnapshot,
-        notes: `report:${slug}`,
-      })
-      .returning();
+        amount: expected.toString(),
+        status: "captured",
+        method: "cashfree",
+      });
 
-    await db.insert(reportEntitlements).values({
-      userId,
-      reportType,
-      orderId: order.id,
-    });
-
-    await db.insert(payments).values({
-      orderId: order.id,
-      cashfreePaymentId: cfPaymentId || cashfree_order_id,
-      cashfreeOrderId: cashfree_order_id,
-      amount: expected.toString(),
-      status: "captured",
-      method: "cashfree",
+      return order.id;
     });
 
     return NextResponse.json({
       success: true,
       reportType,
-      orderId: order.id,
+      orderId,
     });
   } catch (error) {
     console.error("Cashfree verify report error:", error);

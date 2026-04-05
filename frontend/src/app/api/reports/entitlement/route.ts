@@ -31,19 +31,20 @@ export async function GET(request: NextRequest) {
 
     const reportType = slugToReportType(slug as ReportSlug);
 
-    const entitlement = await db.query.reportEntitlements.findFirst({
-      where: and(
-        eq(reportEntitlements.userId, userId),
-        eq(reportEntitlements.reportType, reportType),
-      ),
-    });
-
-    const existingReport = await db.query.astrologyReports.findFirst({
-      where: and(
-        eq(astrologyReports.userId, userId),
-        eq(astrologyReports.reportType, reportType),
-      ),
-    });
+    const [entitlement, existingReport] = await Promise.all([
+      db.query.reportEntitlements.findFirst({
+        where: and(
+          eq(reportEntitlements.userId, userId),
+          eq(reportEntitlements.reportType, reportType),
+        ),
+      }),
+      db.query.astrologyReports.findFirst({
+        where: and(
+          eq(astrologyReports.userId, userId),
+          eq(astrologyReports.reportType, reportType),
+        ),
+      }),
+    ]);
 
     return NextResponse.json({
       entitled: Boolean(entitlement),

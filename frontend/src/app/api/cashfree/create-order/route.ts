@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
+import { db } from "@/db";
+import { cartItems, products } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { paymentProtection } from "@/lib/arcjet";
 import {
   createCashfreeOrder,
@@ -32,13 +35,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const userCart = await db
+      .select({
+        quantity: cartItems.quantity,
+        price: products.price,
+      })
+      .from(cartItems)
+      .innerJoin(products, eq(cartItems.productId, products.id))
+      .where(eq(cartItems.userId, userId));
+
+    if (userCart.length === 0) {
+      return NextResponse.json(
+        { error: "Cart is empty." },
+        { status: 400 },
+      );
+    }
+
+    const amount = userCart.reduce(
+      (sum, item) => sum + Number(item.price) * item.quantity,
+      0,
+    );
+
     const body = await request.json();
-    const amount = body.amount as unknown;
-    const currency = (body.currency as string) || "INR";
+    const currency = "INR";
     const customerPhone = body.customerPhone as string;
     const returnPath = (body.returnPath as string) || "/checkout";
 
-    if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0) {
+    if (!Number.isFinite(amount) || amount <= 0) {
       return NextResponse.json(
         { error: "Invalid amount. Must be a positive number." },
         { status: 400 },

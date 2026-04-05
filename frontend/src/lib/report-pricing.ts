@@ -1,30 +1,23 @@
 /** Report product slugs and INR prices (configurable for production). */
 
-export const REPORT_SLUGS = [
-  "1-year-prediction",
-  "3-year-prediction",
-  "5-year-prediction",
-] as const;
+export const REPORT_METADATA = {
+  "1-year-prediction": { type: "1-year", duration: 1, price: 499 },
+  "3-year-prediction": { type: "3-year", duration: 3, price: 1299 },
+  "5-year-prediction": { type: "5-year", duration: 5, price: 1999 },
+} as const;
 
-export type ReportSlug = (typeof REPORT_SLUGS)[number];
+export const REPORT_SLUGS = Object.keys(REPORT_METADATA) as readonly (keyof typeof REPORT_METADATA)[];
+
+export type ReportSlug = keyof typeof REPORT_METADATA;
 
 export function isReportSlug(s: string): s is ReportSlug {
-  return (REPORT_SLUGS as readonly string[]).includes(s);
+  return s in REPORT_METADATA;
 }
 
 export function slugToReportType(
   slug: ReportSlug,
 ): "1-year" | "3-year" | "5-year" {
-  switch (slug) {
-    case "1-year-prediction":
-      return "1-year";
-    case "3-year-prediction":
-      return "3-year";
-    case "5-year-prediction":
-      return "5-year";
-    default:
-      return "1-year";
-  }
+  return REPORT_METADATA[slug]?.type ?? "1-year";
 }
 
 export function durationToReportType(
@@ -35,14 +28,6 @@ export function durationToReportType(
   return "5-year";
 }
 
-/** INR amounts for one-time report purchase */
-export const REPORT_PRICE_INR: Record<1 | 3 | 5, number> = {
-  1: 499,
-  3: 1299,
-  5: 1999,
-};
-
 export function priceForSlug(slug: ReportSlug): number {
-  const d = slug === "1-year-prediction" ? 1 : slug === "3-year-prediction" ? 3 : 5;
-  return REPORT_PRICE_INR[d];
+  return REPORT_METADATA[slug]?.price ?? 499;
 }

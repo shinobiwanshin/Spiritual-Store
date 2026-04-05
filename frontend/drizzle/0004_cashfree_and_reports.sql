@@ -52,3 +52,21 @@ DO $$ BEGIN
     END IF;
   END IF;
 END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'orders_order_kind_check') THEN
+    ALTER TABLE "orders" ADD CONSTRAINT "orders_order_kind_check" CHECK("order_kind" IN ('product', 'report'));
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'report_entitlements_report_type_check') THEN
+    ALTER TABLE "report_entitlements" ADD CONSTRAINT "report_entitlements_report_type_check" CHECK("report_type" IN ('1-year', '3-year', '5-year'));
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'astrology_reports_report_type_check') THEN
+    ALTER TABLE "astrology_reports" ADD CONSTRAINT "astrology_reports_report_type_check" CHECK("report_type" IN ('1-year', '3-year', '5-year'));
+  END IF;
+END $$;

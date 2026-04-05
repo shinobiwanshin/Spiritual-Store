@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useCartStore } from "@/lib/stores/cart-store";
+import { loadCashfreeScript } from "@/lib/cashfree-client";
 
 declare global {
   interface Window {
@@ -22,19 +23,7 @@ declare global {
   }
 }
 
-function loadCashfreeScript(): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (window.Cashfree) {
-      resolve(true);
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-}
+
 
 function cashfreeMode(): "sandbox" | "production" {
   return process.env.NEXT_PUBLIC_CASHFREE_ENV === "production"
@@ -123,13 +112,25 @@ function CheckoutContent() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             cashfree_order_id: orderId,
-            items: lineItems.map((item) => ({
-              product_id: item.id,
-              title: item.title,
-              price: parseFloat(item.price.replace(/[₹,]/g, "")),
-              quantity: item.quantity,
-              image: item.image,
-            })),
+            items: lineItems.map((item) => {
+              let parsedPrice = 0;
+              if (typeof item.price === "number") {
+                parsedPrice = item.price;
+              } else if (typeof item.price === "string") {
+                const cleaned = item.price.replace(/[₹,]/g, "").trim();
+                parsedPrice = parseFloat(cleaned);
+              }
+              if (isNaN(parsedPrice)) {
+                throw new Error(`Invalid price for item: ${item.title}`);
+              }
+              return {
+                product_id: item.id,
+                title: item.title,
+                price: parsedPrice,
+                quantity: item.quantity,
+                image: item.image,
+              };
+            }),
             total: sum,
             shipping_address: ship,
           }),
@@ -158,7 +159,7 @@ function CheckoutContent() {
     return () => {
       cancelled = true;
     };
-  }, [searchParams, items, total, address, clearCart, router]);
+  }, [searchParams, items, total, clearCart, router]);
 
   const handlePayment = async () => {
     if (

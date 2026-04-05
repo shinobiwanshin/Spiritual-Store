@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import Image from "next/image";
 import { notFound, useParams, useSearchParams, useRouter } from "next/navigation";
 import InternationalSupport from "@/components/InternationalSupport";
@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAuth, useClerk, useUser } from "@clerk/nextjs";
 import { priceForSlug, type ReportSlug } from "@/lib/report-pricing";
 import { toast } from "sonner";
+import { loadCashfreeScript } from "@/lib/cashfree-client";
 import {
   AstrologyReport,
   printReport,
@@ -203,11 +204,14 @@ function ReportDetailInner() {
     };
   }, [isSignedIn, slug, report, checkCachedReport]);
 
+  const verifyOnceRef = useRef(false);
+
   useEffect(() => {
     const cf = searchParams.get("cf");
     const orderId = searchParams.get("order_id");
-    if (!cf || !orderId || !isSignedIn || !report) return;
+    if (!cf || !orderId || !isSignedIn || !report || verifyOnceRef.current) return;
 
+    verifyOnceRef.current = true;
     let cancelled = false;
     (async () => {
       setPaymentLoading(true);
@@ -245,23 +249,6 @@ function ReportDetailInner() {
       cancelled = true;
     };
   }, [searchParams, isSignedIn, slug, report, router]);
-
-  const loadCashfreeScript = (): Promise<boolean> => {
-    return new Promise((resolve) => {
-      if (
-        typeof window !== "undefined" &&
-        (window as unknown as { Cashfree?: unknown }).Cashfree
-      ) {
-        resolve(true);
-        return;
-      }
-      const script = document.createElement("script");
-      script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
-  };
 
   const handleReportPayment = async () => {
     if (!isSignedIn) {

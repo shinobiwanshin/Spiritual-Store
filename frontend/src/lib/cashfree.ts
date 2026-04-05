@@ -130,11 +130,14 @@ export async function fetchCashfreeOrder(
 /** Normalize to 10-digit Indian mobile for Cashfree. */
 export function normalizeCustomerPhone(phone: string): string | null {
   const digits = phone.replace(/\D/g, "");
-  if (digits.length >= 10) {
-    return digits.slice(-10);
+  let last10 = "";
+  if (digits.length === 10) {
+    last10 = digits;
+  } else if (digits.length === 12 && digits.startsWith("91")) {
+    last10 = digits.slice(-10);
   }
-  if (digits.length >= 8) {
-    return digits.padStart(10, "0");
+  if (last10.length === 10 && last10[0] !== "0") {
+    return last10;
   }
   return null;
 }
@@ -170,4 +173,42 @@ export async function fetchFirstCashfreePaymentId(
   const first = list[0] as Record<string, unknown>;
   const pid = first.cf_payment_id ?? first.payment_id;
   return typeof pid === "number" ? String(pid) : typeof pid === "string" ? pid : null;
+}
+
+export async function verifyCashfreePayment(
+  orderId: string,
+  expectedAmount: number,
+  userId: string,
+): Promise<{ cfPaymentId: string; paidAmount: number }> {
+  if (process.env.NODE_ENV !== "production" && orderId.startsWith("mock_cf_")) {
+    return {
+      cfPaymentId: `mock_pay_${orderId.slice(-24)}`,
+      paidAmount: expectedAmount,
+    };
+  }
+
+  const cfOrder = await fetchCashfreeOrder(orderId);
+  const custId = cfOrder.customer_details as
+    | { customer_id?: string }
+    | undefined;
+  if (custId?.customer_id !== userId) {
+    throw new Error("Order does not belong to this account");
+  }
+
+  const amt = cfOrder.order_amount;
+  if (typeof amt !== "number" || !amountsMatch(amt, expectedAmount)) {
+    throw new Error("Paid amount does not match expected amount");
+  }
+
+  if (!isCashfreeOrderPaid(cfOrder)) {
+    throw new Error("Payment is not completed");
+  }
+
+  const cfPaymentId =
+    (await fetchFirstCashfreePaymentId(orderId)) ?? orderId;
+
+  return {
+    cfPaymentId,
+    paidAmount: typeof amt === "number" ? amt : expectedAmount,
+  };
 }

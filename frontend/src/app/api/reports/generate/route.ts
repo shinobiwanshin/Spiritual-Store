@@ -108,24 +108,6 @@ export async function POST(request: NextRequest) {
     // Generate cache key for deterministic lookup
     const cacheKey = generateCacheKey(profile, body.duration);
 
-    // Per-user cache: same birth chart can exist for different paying users
-    const existingReport = await db.query.astrologyReports.findFirst({
-      where: and(
-        eq(astrologyReports.cacheKey, cacheKey),
-        eq(astrologyReports.userId, userId),
-      ),
-    });
-
-    if (existingReport) {
-      // Return cached report
-      return NextResponse.json({
-        success: true,
-        fromCache: true,
-        reportId: existingReport.id,
-        report: existingReport.reportData as AstrologyReport,
-      });
-    }
-
     const reportType = `${body.duration}-year` as
       | "1-year"
       | "3-year"
@@ -148,6 +130,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Per-user cache: same birth chart can exist for different paying users
+    const existingReport = await db.query.astrologyReports.findFirst({
+      where: and(
+        eq(astrologyReports.cacheKey, cacheKey),
+        eq(astrologyReports.userId, userId),
+      ),
+    });
+
+    if (existingReport) {
+      // Return cached report
+      return NextResponse.json({
+        success: true,
+        fromCache: true,
+        reportId: existingReport.id,
+        report: existingReport.reportData as AstrologyReport,
+      });
+    }
+
     // Generate the report (deterministic)
     const report = generateReport(profile, body.duration);
 
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
       .insert(astrologyReports)
       .values({
         userId,
-        orderId: body.orderId ?? entitlement.orderId ?? undefined,
+        orderId: entitlement.orderId ?? undefined,
         reportType,
         birthData: {
           dob: profile.dob,
@@ -171,12 +171,32 @@ export async function POST(request: NextRequest) {
         reportData: report,
         cacheKey,
       })
+      .onConflictDoNothing()
       .returning();
+
+    if (!savedReport) {
+      // Re-query in case of concurrent insert
+      const winnerReport = await db.query.astrologyReports.findFirst({
+        where: and(
+          eq(astrologyReports.cacheKey, cacheKey),
+          eq(astrologyReports.userId, userId),
+        ),
+      });
+
+      if (winnerReport) {
+        return NextResponse.json({
+          success: true,
+          fromCache: true,
+          reportId: winnerReport.id,
+          report: winnerReport.reportData as AstrologyReport,
+        });
+      }
+    }
 
     return NextResponse.json({
       success: true,
       fromCache: false,
-      reportId: savedReport.id,
+      reportId: savedReport?.id,
       report,
     });
   } catch (error) {

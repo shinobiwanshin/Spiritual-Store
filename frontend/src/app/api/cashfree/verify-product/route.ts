@@ -5,9 +5,7 @@ import { db, cartItems, orderItems, orders, payments } from "@/db";
 import { paymentProtection } from "@/lib/arcjet";
 import {
   amountsMatch,
-  fetchCashfreeOrder,
-  fetchFirstCashfreePaymentId,
-  isCashfreeOrderPaid,
+  verifyCashfreePayment,
 } from "@/lib/cashfree";
 
 interface OrderItem {
@@ -88,7 +86,7 @@ export async function POST(request: NextRequest) {
       (s: number, it: OrderItem) => s + it.price * it.quantity,
       0,
     );
-    if (!Number.isFinite(subtotal) || Math.abs(subtotal - total) > 0.05) {
+    if (!Number.isFinite(subtotal) || !amountsMatch(subtotal, total)) {
       return NextResponse.json(
         { error: "Order total does not match items" },
         { status: 400 },
@@ -112,44 +110,15 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    let cfPaymentId: string | null = null;
-    let paidAmount = total;
-
-    if (
-      process.env.NODE_ENV !== "production" &&
-      cashfree_order_id.startsWith("mock_cf_")
-    ) {
-      paidAmount = total;
-      cfPaymentId = "mock_cf_payment";
-    } else {
-      const cfOrder = await fetchCashfreeOrder(cashfree_order_id);
-      const custId = cfOrder.customer_details as
-        | { customer_id?: string }
-        | undefined;
-      if (custId?.customer_id !== userId) {
-        return NextResponse.json(
-          { error: "Order does not belong to this account" },
-          { status: 403 },
-        );
-      }
-      const amt = cfOrder.order_amount;
-      if (typeof amt !== "number" || !amountsMatch(amt, total)) {
-        return NextResponse.json(
-          { error: "Paid amount does not match order" },
-          { status: 400 },
-        );
-      }
-      if (!isCashfreeOrderPaid(cfOrder)) {
-        return NextResponse.json(
-          { error: "Payment is not completed" },
-          { status: 400 },
-        );
-      }
-      cfPaymentId =
-        (await fetchFirstCashfreePaymentId(cashfree_order_id)) ??
-        cashfree_order_id;
-      paidAmount = typeof amt === "number" ? amt : total;
+    let paymentResult;
+    try {
+      paymentResult = await verifyCashfreePayment(cashfree_order_id, total, userId);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Payment verification failed";
+      const status = msg.includes("account") ? 403 : 400;
+      return NextResponse.json({ error: msg }, { status });
     }
+    const { cfPaymentId, paidAmount } = paymentResult;
 
     const itemsSnapshot = items.map((item: OrderItem) => ({
       productId: item.product_id,
@@ -159,46 +128,50 @@ export async function POST(request: NextRequest) {
       image: item.image,
     }));
 
-    const [order] = await db
-      .insert(orders)
-      .values({
-        userId,
+    const orderId = await db.transaction(async (tx) => {
+      const [order] = await tx
+        .insert(orders)
+        .values({
+          userId,
+          cashfreeOrderId: cashfree_order_id,
+          cashfreePaymentId: cfPaymentId || undefined,
+          orderKind: "product",
+          status: "paid",
+          subtotal: subtotal.toString(),
+          total: paidAmount.toString(),
+          shippingAddress: shipping_address,
+          itemsSnapshot,
+        })
+        .returning();
+
+      const orderItemsData = items.map((item: OrderItem) => ({
+        orderId: order.id,
+        productId: item.product_id,
+        title: item.title,
+        price: item.price.toString(),
+        quantity: item.quantity,
+        image: item.image,
+      }));
+
+      await tx.insert(orderItems).values(orderItemsData);
+
+      await tx.insert(payments).values({
+        orderId: order.id,
+        cashfreePaymentId: cfPaymentId || cashfree_order_id,
         cashfreeOrderId: cashfree_order_id,
-        cashfreePaymentId: cfPaymentId || undefined,
-        orderKind: "product",
-        status: "paid",
-        subtotal: subtotal.toString(),
-        total: paidAmount.toString(),
-        shippingAddress: shipping_address,
-        itemsSnapshot,
-      })
-      .returning();
+        amount: paidAmount.toString(),
+        status: "captured",
+        method: "cashfree",
+      });
 
-    const orderItemsData = items.map((item: OrderItem) => ({
-      orderId: order.id,
-      productId: item.product_id,
-      title: item.title,
-      price: item.price.toString(),
-      quantity: item.quantity,
-      image: item.image,
-    }));
+      await tx.delete(cartItems).where(eq(cartItems.userId, userId));
 
-    await db.insert(orderItems).values(orderItemsData);
-
-    await db.insert(payments).values({
-      orderId: order.id,
-      cashfreePaymentId: cfPaymentId || cashfree_order_id,
-      cashfreeOrderId: cashfree_order_id,
-      amount: paidAmount.toString(),
-      status: "captured",
-      method: "cashfree",
+      return order.id;
     });
-
-    await db.delete(cartItems).where(eq(cartItems.userId, userId));
 
     return NextResponse.json({
       success: true,
-      orderId: order.id,
+      orderId,
       message: "Payment verified and order created",
     });
   } catch (error) {

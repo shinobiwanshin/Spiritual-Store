@@ -47,7 +47,14 @@ function OrdersContent() {
               cashfree_order_id: order.cashfreeOrderId,
               status: order.status,
               total: parseFloat(order.total as string),
-              items: order.items,
+              items: ((order.itemsSnapshot as Record<string, unknown>[]) || []).map((item) => ({
+                ...item,
+                product_id: (item.productId ?? item.product_id) as string,
+                title: item.title as string,
+                price: typeof item.price === "number" ? item.price : Number(item.price),
+                quantity: item.quantity as number,
+                image: (item.image as string) || "",
+              })),
               created_at: order.createdAt,
             }),
           );
