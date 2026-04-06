@@ -1,5 +1,5 @@
-import { drizzle } from "drizzle-orm/neon-postgres";
-import { Pool } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import { products as productsData } from "@/data/products";
 import { products, categories, type NewProduct } from "./schema";
 import "dotenv/config";
@@ -11,8 +11,8 @@ const runSeed = async () => {
 
   console.log("⏳ Connecting to Neon database...");
 
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-  const db = drizzle(pool);
+  const client = postgres(process.env.DATABASE_URL);
+  const db = drizzle(client);
 
   console.log("🚀 Seeding database...");
 
@@ -86,6 +86,8 @@ const runSeed = async () => {
   } catch (error) {
     console.error("❌ Seeding failed:", error);
     process.exit(1);
+  } finally {
+    await client.end();
   }
 };
 

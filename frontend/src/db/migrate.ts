@@ -1,6 +1,6 @@
-import { drizzle } from "drizzle-orm/neon-postgres";
-import { migrate } from "drizzle-orm/neon-postgres/migrator";
-import { Pool } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/postgres-js";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
+import postgres from "postgres";
 import { config } from "dotenv";
 
 // Load environment variables with error handling
@@ -31,8 +31,8 @@ const runMigrate = async () => {
 
   console.log("⏳ Connecting to Neon database...");
 
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-  const db = drizzle(pool);
+  const client = postgres(process.env.DATABASE_URL);
+  const db = drizzle(client);
 
   console.log("🚀 Running migrations...");
 
@@ -42,6 +42,8 @@ const runMigrate = async () => {
   } catch (error) {
     console.error("❌ Migration failed:", error);
     process.exit(1);
+  } finally {
+    await client.end();
   }
 };
 
