@@ -4,12 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/migrate.js && next build",
     "start": "next start",
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:migrate": "npx tsx src/db/migrate.ts",
+    "db:migrate:prod": "node scripts/migrate.js",
     "db:seed": "npx tsx src/db/seed.ts",
     "db:studio": "drizzle-kit studio"
   },
