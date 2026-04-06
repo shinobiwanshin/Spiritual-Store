@@ -1,5 +1,5 @@
-import { drizzle } from "drizzle-orm/neon-http";
-import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import { sql } from "drizzle-orm";
 import { config } from "dotenv";
 import * as fs from "fs";
@@ -8,7 +8,7 @@ import * as fs from "fs";
  * This script marks all existing migrations as complete in the database.
  * Use this when you have a database that was created with `db:push` but now
  * want to switch to using migrations.
- * 
+ *
  * It reads the migration journal and snapshots to get the correct hashes.
  */
 
@@ -27,8 +27,8 @@ async function markMigrationsComplete() {
   }
 
   console.log("⏳ Connecting to database...");
-  const sqlClient = neon(process.env.DATABASE_URL);
-  const db = drizzle(sqlClient);
+  const client = postgres(process.env.DATABASE_URL);
+  const db = drizzle(client);
 
   // Check if migrations are already tracked
   try {
@@ -36,7 +36,7 @@ async function markMigrationsComplete() {
       SELECT COUNT(*) as count 
       FROM drizzle."__drizzle_migrations"
     `);
-    
+
     if (existing.rows[0]?.count > 0) {
       console.log("✅ Migrations already tracked, skipping initialization");
       return;
@@ -64,7 +64,7 @@ async function markMigrationsComplete() {
 
   // Read journal to get migration metadata
   const journal = JSON.parse(
-    fs.readFileSync("drizzle/meta/_journal.json", "utf8")
+    fs.readFileSync("drizzle/meta/_journal.json", "utf8"),
   );
 
   console.log("✅ Marking existing migrations as applied...");
@@ -74,10 +74,12 @@ async function markMigrationsComplete() {
     const snapshotPath = `drizzle/meta/${entry.tag.split("_")[0]}_snapshot.json`;
     const snapshot = JSON.parse(fs.readFileSync(snapshotPath, "utf8"));
 
-    await db.execute(sql.raw(`
+    await db.execute(
+      sql.raw(`
       INSERT INTO drizzle."__drizzle_migrations" (hash, created_at)
       VALUES ('${snapshot.id}', ${entry.when})
-    `));
+    `),
+    );
 
     console.log(`   ✓ ${entry.tag}`);
   }
