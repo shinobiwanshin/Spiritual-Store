@@ -30,6 +30,22 @@ async function markMigrationsComplete() {
   const sqlClient = neon(process.env.DATABASE_URL);
   const db = drizzle(sqlClient);
 
+  // Check if migrations are already tracked
+  try {
+    const existing = await db.execute(sql`
+      SELECT COUNT(*) as count 
+      FROM drizzle."__drizzle_migrations"
+    `);
+    
+    if (existing.rows[0]?.count > 0) {
+      console.log("✅ Migrations already tracked, skipping initialization");
+      return;
+    }
+  } catch (error) {
+    // Table doesn't exist, continue with setup
+    console.log("🔧 Migration tracking not found, initializing...");
+  }
+
   console.log("🧹 Cleaning up old migration tables...");
   await db.execute(sql`DROP TABLE IF EXISTS public."__drizzle_migrations"`);
   await db.execute(sql`DROP TABLE IF EXISTS drizzle."__drizzle_migrations"`);
