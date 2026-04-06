@@ -115,22 +115,20 @@ export async function POST(request: NextRequest) {
 
     const reportType = REPORT_TYPE_BY_DURATION[body.duration];
 
-    // Lock, consume entitlement, and persist report atomically to prevent double-spend.
+    // Consume entitlement and persist report atomically to prevent double-spend.
     const transactionResult = await db.transaction(async (tx) => {
       const [entitlement] = await tx
-        .select({
-          id: reportEntitlements.id,
-          orderId: reportEntitlements.orderId,
-        })
-        .from(reportEntitlements)
+        .delete(reportEntitlements)
         .where(
           and(
             eq(reportEntitlements.userId, userId),
             eq(reportEntitlements.reportType, reportType),
           ),
         )
-        .limit(1)
-        .for("update");
+        .returning({
+          id: reportEntitlements.id,
+          orderId: reportEntitlements.orderId,
+        });
 
       if (!entitlement) {
         return null;
@@ -163,10 +161,6 @@ export async function POST(request: NextRequest) {
           cacheKey,
         })
         .returning();
-
-      await tx
-        .delete(reportEntitlements)
-        .where(eq(reportEntitlements.id, entitlement.id));
 
       return {
         report: insertedReport.reportData,
